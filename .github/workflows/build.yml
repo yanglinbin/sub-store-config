@@ -83,12 +83,3 @@ jobs:
               commit -qm "build: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dist
 
-      - name: 刷新 jsDelivr 缓存（否则分支内容最长会滞后 12h）
-        run: |
-          for p in mihomo/config.yaml singbox/template.json scripts/mihomo.js scripts/singbox.js scripts/nodes.js; do
-            if curl -fsS --max-time 60 "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@dist/$p" >/dev/null; then
-              echo "purged $p"
-            else
-              echo "::warning::purge 失败：$p"
-            fi
-          done

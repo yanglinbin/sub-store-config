@@ -38,16 +38,18 @@ npm run validate
 `npm run build` 需要能访问 `cdn.jsdelivr.net`；拉不到时用 `.cache/` 里上一份并在日志里告警。
 `dist/` 已 gitignore——它由 CI 推送到 `dist` 分支（单 commit 强制覆盖）。
 
-产物基址（`BASE_URL`，默认值）：
+### 两种基址（重要，别混用）
 
-```
-https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist
-```
+| 用途 | 基址 | 谁在拉 | 为什么 |
+|---|---|---|---|
+| **模板与脚本**（`mihomo/config.yaml`、`singbox/template.json`、`scripts/*.js`） | `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist` | **Sub-Store 服务器** | 走 raw 只有 5 分钟缓存，改完立刻生效 |
+| **规则集**（`*/rules/*.list`、`*.srs`） | `https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist` | **客户端**（mihomo / sing-box） | jsDelivr 在国内可达；分支缓存 ≤12h，规则每天更新，可接受 |
 
-用 jsDelivr 是因为 `raw.githubusercontent.com` 在部分网络下不可达（构建机与 Sub-Store 服务器都要能访问）。
-备选：`https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist`。
-jsDelivr 对分支有最长 12h 边缘缓存，急着拿最新产物可访问
-`https://purge.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/<路径>` 主动刷新。
+模板里已经写死了 jsDelivr 的规则集地址（构建时的 `BASE_URL`），所以 Sub-Store 那两个文件与三个脚本的 URL
+都填 **raw** 版本即可。
+
+> 踩过的坑：起初模板也走 jsDelivr，结果分支缓存导致客户端拿到 12 小时前的旧模板（缺字段 / 旧 URL），
+> 而 jsDelivr 的 purge 接口有速率限制，刷不动。模板/脚本走 raw 就彻底没这个问题。
 
 ## 加规则 / 改顺序
 
@@ -79,7 +81,7 @@ jsDelivr 对分支有最长 12h 边缘缓存，急着拿最新产物可访问
 | User-Agent | `clash.meta/v1.19.99`（按机场要求调整，优先 mihomo 订阅） |
 | 超时 | `10000` |
 
-「节点操作」只加 **一个脚本操作**（远程）：`<BASE_URL>/scripts/nodes.js`
+「节点操作」只加 **一个脚本操作**（远程）：`https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/scripts/nodes.js`
 
 它做三件事：剔除信息节点（正则来自 `config/node-filter.yaml`）、按 `name+server+port` 去重、按名称升序。
 比在前端拼「丢弃筛选 / 去重 / 排序」更省事，也保证两个客户端拿到完全一样的节点集合。
@@ -92,12 +94,12 @@ jsDelivr 对分支有最长 12h 边缘缓存，急着拿最新产物可访问
 |---|---|
 | 类型 | `mihomoConfig`（mihomo 配置文件） |
 | 来源 | 远程 |
-| URL | `<BASE_URL>/mihomo/config.yaml` |
+| URL | `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/mihomo/config.yaml` |
 
 「处理操作」按序添加：
 
 1. **从订阅添加节点（Add Proxies）**：订阅 `kitty`，位置 `replace`
-2. **脚本操作**：远程脚本 `<BASE_URL>/scripts/mihomo.js#name=kitty`
+2. **脚本操作**：远程脚本 `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/scripts/mihomo.js#name=kitty`
 
 保存后得到链接 `/api/file/clash`，直接导入 Mihomo Party / Clash Verge Rev 等。
 
@@ -107,9 +109,9 @@ jsDelivr 对分支有最长 12h 边缘缓存，急着拿最新产物可访问
 |---|---|
 | 类型 | 普通文件（file） |
 | 来源 | 远程 |
-| URL | `<BASE_URL>/singbox/template.json` |
+| URL | `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/singbox/template.json` |
 
-「处理操作」：**脚本操作** → 远程脚本 `<BASE_URL>/scripts/singbox.js#name=kitty`
+「处理操作」：**脚本操作** → 远程脚本 `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/scripts/singbox.js#name=kitty`
 
 保存后链接 `/api/file/singbox`。sing-box 内核本身没有订阅概念，用它的 GUI 或手动保存成
 `config.json` 再 `sing-box run -c`。
