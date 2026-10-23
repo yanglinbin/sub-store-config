@@ -334,7 +334,9 @@ f1tv:
   需要关 v6 时手动加 `{query_type:["AAAA"], action:"reject"}` 即可，模板已预留位置注释。
 - `inbounds`：`tun`（`address: ["172.19.0.1/30", "fdfe:dcba:9876::1/126"]` 双栈、`auto_route`、
   `strict_route`、`stack: mixed`、`mtu: 1400`）+ `mixed` 127.0.0.1:7890。
-- `outbounds`：`{{OUTBOUNDS}}` 由脚本填（节点 + 地区 urltest + 4 个 select + `direct` + `reject`）。
+- `outbounds`：由脚本填（节点 + 地区 urltest + 4 个 select + 直连 outbound）。
+  **直连 outbound 的 tag 用 `DIRECT`**：sing-box 的 tag 全局唯一，组名 `direct` 与 `direct` outbound 会撞；
+  1.14 也没有 `type: "reject"` outbound，广告拒绝走规则 `action: "reject"`。
 - `route`：`auto_detect_interface`、`default_domain_resolver`、`final: "final"`、`rules` 见 §6.2。
 - `experimental`：`cache_file`（`store_fakeip: true`）、`clash_api` 127.0.0.1:9090。
 

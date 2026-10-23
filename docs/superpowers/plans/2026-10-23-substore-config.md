@@ -655,12 +655,13 @@ git commit -m "feat: mihomo 模板渲染"
 - Produces: `renderSingbox({ regions, order, modules, baseUrl }) -> string`（JSON 文本，两空格缩进）
 - 模板占位符：`"{{RULE_SET}}"`、`"{{RULES}}"`（字符串替换，替换后必须仍是合法 JSON）
 - 必须生成的固定结构：
-  - 顶层 `log: {level: "info", timestamp: true}`、`http_clients: [{tag: "direct-download", detour: "direct"}]`（1.14 必须显式声明，否则用弃用的隐式默认客户端）
+  - 顶层 `log: {level: "info", timestamp: true}`、`http_clients: [{tag: "direct-download", detour: "DIRECT"}]`（1.14 必须显式声明，否则用弃用的隐式默认客户端）
   - `dns.servers`：`{type: "https", tag: "local-dns", server: "223.5.5.5", path: "/dns-query"}`、`{type: "https", tag: "remote-dns", server: "1.1.1.1", path: "/dns-query", detour: "proxies"}`、`{type: "fakeip", tag: "fakeip", inet4_range: "198.18.0.0/15", inet6_range: "fc00::/18"}`
   - `dns.strategy: "prefer_ipv4"`、`dns.final: "remote-dns"`；**不得**出现 `AAAA` reject、不得出现 `independent_cache`
   - `inbounds[0]`：`{type: "tun", tag: "tun-in", address: ["172.19.0.1/30", "fdfe:dcba:9876::1/126"], auto_route: true, strict_route: true, stack: "mixed", mtu: 1400}`
   - `inbounds[1]`：`{type: "mixed", tag: "mixed-in", listen: "127.0.0.1", listen_port: 7890}`
-  - `outbounds`：`[{type: "selector", tag: "proxies", outbounds: ["direct"], default: "direct"}, {type: "selector", tag: "direct", outbounds: ["direct"]}, {type: "selector", tag: "f1tv", outbounds: ["direct"]}, {type: "selector", tag: "final", outbounds: ["direct"], default: "direct"}, {type: "direct", tag: "direct"}, {type: "reject", tag: "reject"}]`（脚本会覆盖这 4 个 selector）
+  - `outbounds`：`[{type: "selector", tag: "proxies", outbounds: ["DIRECT"], default: "DIRECT"}, {type: "selector", tag: "direct", outbounds: ["DIRECT"]}, {type: "selector", tag: "f1tv", outbounds: ["DIRECT"]}, {type: "selector", tag: "final", outbounds: ["DIRECT"], default: "DIRECT"}, {type: "direct", tag: "DIRECT"}]`（脚本会覆盖这 4 个 selector）
+    - **直连 outbound 的 tag 必须是 `DIRECT`**：sing-box 里 tag 全局唯一，组名 `direct` 与 outbound `direct` 会撞成 `duplicate outbound tag`。1.14 也已没有 `type: "reject"` outbound（拒绝走 `action: "reject"`）
   - `route`：`auto_detect_interface: true`、`default_http_client: "direct-download"`、`default_domain_resolver: "local-dns"`、`final: "final"`、`rule_set` 每条 `{type: "remote", tag, format: "binary", url: "<baseUrl>/singbox/rules/<m>.srs", update_interval: "1d"}`（按 order 顺序）
   - `experimental`：`cache_file: {enabled: true, store_fakeip: true}`、`clash_api: {external_controller: "127.0.0.1:9090"}`
 
@@ -785,7 +786,7 @@ test('direct/final 的 DIRECT 在首位，proxies 的 DIRECT 在末位', () => {
   assert.equal(get('proxies').members.at(-1), 'direct');
   assert.deepEqual(get('proxies').members.slice(0, 3), ['香港', '美国', '日本']);
   assert.equal(get('f1tv').members[0], '美国');
-  assert.equal(get('f1tv').members.at(-1), 'direct');
+  assert.equal(get('f1tv').members.at(-1), 'DIRECT');
   assert.equal(get('f1tv').default, '美国');
   assert.ok(get('proxies').members.includes('未知节点'));
 });
@@ -797,7 +798,7 @@ test('零节点不生成地区组，且 proxies 仍非空', () => {
   assert.ok(defs.every((d) => d.members.length > 0));
 });
 
-test('mihomo 风格使用 DIRECT 大写', () => {
+test('两端都用 DIRECT 大写（sing-box 里 direct 组名与 outbound tag 不能同名）', () => {
   const defs = buildGroupDefs({ names, regions, style: 'mihomo' });
   assert.equal(defs.find((d) => d.name === 'final').members[0], 'DIRECT');
   assert.equal(defs.find((d) => d.name === 'proxies').members.at(-1), 'DIRECT');
@@ -852,9 +853,9 @@ test('singbox 脚本注入节点、生成地区组与四个组', async () => {
   assert.deepEqual(byTag['香港'].outbounds, ['🇭🇰Hong Kong 03']);
   assert.deepEqual(byTag.proxies.outbounds.slice(0, 2), ['香港', '美国']);
   assert.equal(byTag.proxies.default, '香港');
-  assert.equal(byTag.direct.outbounds[0], 'direct');
+  assert.equal(byTag.direct.outbounds[0], 'DIRECT');
   assert.ok(byTag.proxies.outbounds.includes('🇭🇰Hong Kong 03'));
-  assert.equal(byTag.final.outbounds[0], 'direct');
+  assert.equal(byTag.final.outbounds[0], 'DIRECT');
 });
 
 test('订阅为空时仍产出可启动配置', async () => {
