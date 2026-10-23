@@ -784,7 +784,7 @@ test('direct/final 的 DIRECT 在首位，proxies 的 DIRECT 在末位', () => {
   assert.equal(get('final').default, 'direct');
   assert.equal(get('proxies').members[0], '香港');
   assert.equal(get('proxies').members.at(-1), 'direct');
-  assert.deepEqual(get('proxies').members.slice(0, 3), ['香港', '美国', '日本']);
+  assert.deepEqual(get('proxies').members.slice(0, 3), ['香港', '日本', '美国']);
   assert.equal(get('f1tv').members[0], '美国');
   assert.equal(get('f1tv').members.at(-1), 'DIRECT');
   assert.equal(get('f1tv').default, '美国');
