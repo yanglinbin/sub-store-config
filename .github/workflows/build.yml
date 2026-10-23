@@ -53,9 +53,6 @@ jobs:
       - run: npm test
       - run: npm run build
 
-      - name: 运行时冒烟（真跑 sing-box，验证 rule-set 下载与初始化）
-        run: npm run probe
-
       - name: 安装 mihomo 并校验生成的 mihomo 配置
         run: |
           set -e
@@ -70,6 +67,10 @@ jobs:
           else
             echo "::warning::mihomo 下载失败，跳过 mihomo -t"
           fi
+
+      - name: 运行时冒烟（sing-box 真跑 + mihomo -t 校验脚本产物）
+        run: npm run probe
+
 
       - name: 把 dist 推到 dist 分支（单 commit，强制覆盖）
         env:
