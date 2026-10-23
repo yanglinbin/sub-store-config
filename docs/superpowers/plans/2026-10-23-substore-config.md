@@ -271,7 +271,7 @@ git commit -m "feat: 仓库骨架与三份真相配置加载器"
   - `parseClashText(text) -> Entry[]`（兼容两种输入：纯行格式与 clash YAML payload 格式；忽略空行、`#` 注释、`payload:` 头；`- 'x'` / `- x` 去掉列表符与引号；`+.foo` 归一为 `DOMAIN-SUFFIX`；无逗号的纯值按 `mod.behavior` 解释为 `DOMAIN`/`IP-CIDR`，由调用方传 `{ defaultType }`；未知类型 `throw`）
   - `parseClashText(text, { defaultType = 'DOMAIN' })`
   - `normalizeCustom(obj, behavior) -> Entry[]`（对象形如 `{domain:[], domain_suffix:[], domain_keyword:[], ip_cidr:[], process_name:[]}`，按 behavior 校验）
-  - `toHeadless(entries, version = 3) -> { version, rules: object[] }`（同字段聚合成一条 rule）
+  - `toHeadless(entries, version = 3) -> { version, rules: object[] }`（**一个字段一条 rule**，rules 之间是 OR）
   - `toMihomoLines(entries) -> string[]`（`DOMAIN-SUFFIX,x` 形式，保持原类型名）
   - `dedupe(entries) -> Entry[]`（按 `type + ' ' + value` 去重，保持首次出现顺序）
 
@@ -358,7 +358,7 @@ Expected: FAIL，`Cannot find module '../build/parse.mjs'`
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `node --test tests/parse.test.mjs`
-Expected: PASS（7 个用例）
+Expected: PASS（8 个用例）
 
 - [ ] **Step 5: 提交**
 
