@@ -378,7 +378,7 @@ git commit -m "feat: clash 规则文本解析与双端序列化"
 **Interfaces:**
 - Produces: `createFetcher({ cacheDir, fetchImpl = globalThis.fetch, timeoutMs = 20000, onWarn = () => {} }) -> { get(url): Promise<string> }`
   - 缓存文件名 = `sha256(url).slice(0,16) + '.txt'`，内容为上游原文
-  - `get` 行为：缓存存在 → 直接返回（不调 `fetchImpl`）；不存在 → 下载、写缓存、返回；下载失败且缓存存在 → `onWarn(url, err)` 并返回缓存；下载失败且无缓存 → `throw`
+  - `get` 行为（见 ledger Ruling）：**每次都尝试下载**（否则上游永不更新）；成功 → 写缓存 + 写内存 memo；失败且缓存存在 → `onWarn(url, err)` + 返回缓存；失败且无缓存 → `throw`。同一 fetcher 实例内重复 `get` 同一 URL 走 memo，不发第二个请求
 
 - [ ] **Step 1: 写失败测试 `tests/fetch.test.mjs`**
 
