@@ -51,10 +51,11 @@ const selectOutbounds = defs
     return out;
   });
 
+// 顺序 = 客户端显示顺序：节点 → 四个 select（proxies/f1tv/direct/final）→ 地区组 → 其余静态 outbound
 config.outbounds = [
   ...nodes,
-  ...regionOutbounds,
   ...selectOutbounds,
+  ...regionOutbounds,
   ...config.outbounds.filter((o) => groupTags.indexOf(o.tag) === -1),
 ];
 

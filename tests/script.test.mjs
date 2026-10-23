@@ -48,6 +48,11 @@ test('singbox 脚本注入节点、生成地区组与四个组', async () => {
   assert.equal(byTag['香港'].type, 'urltest');
   assert.deepEqual(byTag['香港'].outbounds, ['🇭🇰Hong Kong 03']);
   assert.deepEqual(byTag.proxies.outbounds.slice(0, 2), ['香港', '美国']);
+  // 组在 outbounds 里的顺序 = 客户端里的显示顺序：proxies → f1tv → direct → final → 地区组
+  const groupOrder = cfg.outbounds
+    .filter((o) => o.type === 'selector' || o.type === 'urltest')
+    .map((o) => o.tag);
+  assert.deepEqual(groupOrder, ['proxies', 'f1tv', 'direct', 'final', '香港', '美国']);
   assert.equal(byTag.proxies.default, '香港');
   assert.equal(byTag.direct.outbounds[0], 'DIRECT');
   assert.ok(byTag.proxies.outbounds.includes('🇭🇰Hong Kong 03'));
