@@ -9,7 +9,7 @@ import { emitScripts } from './emit-script.mjs';
 import { compileSrs } from './compile-srs.mjs';
 import { validateDist } from './validate.mjs';
 
-const BASE_URL = process.env.BASE_URL || 'https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist';
+const BASE_URL = process.env.BASE_URL || 'https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist';
 const DIST = 'dist';
 
 const { regions, modules, order } = loadAll();

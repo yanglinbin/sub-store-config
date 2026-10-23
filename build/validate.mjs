@@ -90,7 +90,7 @@ export async function validateDist({ distDir = 'dist', baseUrl, skipBinaries = f
 
 /** CLI：node build/validate.mjs */
 if (process.argv[1] && process.argv[1].endsWith('validate.mjs')) {
-  const baseUrl = process.env.BASE_URL || 'https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist';
+  const baseUrl = process.env.BASE_URL || 'https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist';
   const r = await validateDist({ distDir: 'dist', baseUrl });
   if (!r.ok) {
     for (const p of r.problems) console.error('✖', p);

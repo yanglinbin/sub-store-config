@@ -38,7 +38,16 @@ npm run validate
 `npm run build` 需要能访问 `cdn.jsdelivr.net`；拉不到时用 `.cache/` 里上一份并在日志里告警。
 `dist/` 已 gitignore——它由 CI 推送到 `dist` 分支（单 commit 强制覆盖）。
 
-产物基址（`BASE_URL`）：`https://raw.githubusercontent.com/<owner>/sub-store-config/dist`
+产物基址（`BASE_URL`，默认值）：
+
+```
+https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist
+```
+
+用 jsDelivr 是因为 `raw.githubusercontent.com` 在部分网络下不可达（构建机与 Sub-Store 服务器都要能访问）。
+备选：`https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist`。
+jsDelivr 对分支有最长 12h 边缘缓存，急着拿最新产物可访问
+`https://purge.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/<路径>` 主动刷新。
 
 ## 加规则 / 改顺序
 
