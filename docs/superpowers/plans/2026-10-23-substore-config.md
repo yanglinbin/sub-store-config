@@ -560,7 +560,7 @@ git commit -m "feat: 模块化规则集组装与双端落盘"
 - Produces: `renderMihomo({ regions, order, modules, baseUrl }) -> string`（YAML 文本，`yaml.dump` 输出）
 - 模板占位符：`{{RULE_PROVIDERS}}`、`{{RULES}}`、`{{PROXY_GROUPS_FALLBACK}}`（各自独占一行，缩进由渲染器给）
 - 生成结构（值必须逐字一致）：
-  - 顶层：`mixed-port: 7890`、`allow-lan: true`、`mode: rule`、`log-level: info`、`ipv6: true`、`external-controller: ":9090"`、`unified-delay: true`、`tcp-concurrent: true`、`find-process-mode: "off"`、`profile: {store-selected: true, store-fake-ip: false}`、`proxies: []`
+  - 顶层：`mixed-port: 7890`、`allow-lan: true`、`mode: rule`、`log-level: info`、`ipv6: true`、`external-controller: ":9090"`、`unified-delay: true`、`tcp-concurrent: true`、`find-process-mode: "strict"`（有进程规则，不能 off）、`profile: {store-selected: true, store-fake-ip: false}`、`proxies: []`
   - `rule-providers.<module>` = `{type: http, behavior: <behavior>, url: "<baseUrl>/mihomo/rules/<m>.list", path: "./ruleset/<m>.yaml", interval: 86400}`
   - `rules`：逐条 `RULE-SET,<module>,<target>`；`no_resolve` 为真时追加 `,no-resolve`；`target: reject` → `REJECT`，其余原样（`direct`/`proxies`/`f1tv`）
   - `proxy-groups`（fallback 骨架，仅保证无脚本时也能启动）：`{name: proxies, type: select, proxies: [DIRECT]}`、`{name: direct, type: select, proxies: [DIRECT]}`、`{name: f1tv, type: select, proxies: [DIRECT]}`、`{name: final, type: select, proxies: [DIRECT]}`
