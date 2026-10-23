@@ -13,7 +13,8 @@ function main(config) {
     if (d.type === 'urltest') {
       return {
         name: d.name,
-        type: 'urltest',
+        // mihomo 的类型名是 url-test（带连字符）；urltest 是 sing-box 的写法
+        type: 'url-test',
         proxies: d.members,
         url: d.url,
         interval: d.interval,

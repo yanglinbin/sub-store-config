@@ -40,11 +40,22 @@ export function probeSingbox({ configPath = 'dist/singbox/template.json', durati
 }
 
 if (process.argv[1] && process.argv[1].endsWith('probe.mjs')) {
-  const r = await probeSingbox();
-  if (r.ok) {
-    console.log('✔ 运行时冒烟通过（rule-set 已初始化，无 FATAL）');
-  } else {
-    for (const p of r.problems) console.error('✖', p);
-    process.exitCode = 1;
+  let failed = false;
+
+  const sb = await probeSingbox();
+  if (sb.ok) console.log('✔ sing-box 运行时冒烟通过（rule-set 已初始化，无 FATAL）');
+  else {
+    failed = true;
+    for (const p of sb.problems) console.error('✖ sing-box:', p);
   }
+
+  const { probeMihomo } = await import('./probe-mihomo.mjs');
+  const mh = await probeMihomo();
+  if (mh.ok) console.log(`✔ mihomo 冒烟通过${mh.skipped ? '（' + mh.skipped + '，已跳过）' : '（mihomo -t）'}`);
+  else {
+    failed = true;
+    for (const p of mh.problems) console.error('✖ mihomo:', p);
+  }
+
+  if (failed) process.exitCode = 1;
 }
