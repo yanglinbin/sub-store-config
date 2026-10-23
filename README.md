@@ -79,13 +79,10 @@ jsDelivr 对分支有最长 12h 边缘缓存，急着拿最新产物可访问
 | User-Agent | `clash.meta/v1.19.99`（按机场要求调整，优先 mihomo 订阅） |
 | 超时 | `10000` |
 
-「节点操作」按序添加：
+「节点操作」只加 **一个脚本操作**（远程）：`<BASE_URL>/scripts/nodes.js`
 
-1. **丢弃筛选（Discard regex）**：`config/node-filter.yaml` 里的 `exclude_regex`
-   即 `网址|剩余|流量|重置|套餐|如遇|永久|官方|群组|欢迎|官网|频道|个人|到期|续费|免费`
-2. **节点去重（Handle Duplicate）**：删除模式
-3. **旗帜操作（Flag）**：先移除再按名称添加
-4. **节点排序（Sort）**：按名称升序
+它做三件事：剔除信息节点（正则来自 `config/node-filter.yaml`）、按 `name+server+port` 去重、按名称升序。
+比在前端拼「丢弃筛选 / 去重 / 排序」更省事，也保证两个客户端拿到完全一样的节点集合。
 
 ### 2. 文件 `clash`（mihomo 用）
 
