@@ -3,3 +3,4 @@ node_modules/
 .superpowers/
 *.log
 dist/
+cache.db

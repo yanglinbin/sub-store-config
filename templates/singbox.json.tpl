@@ -1,6 +1,6 @@
 {
   "log": { "level": "info", "timestamp": true },
-  "http_clients": [{ "tag": "direct-download", "detour": "DIRECT" }],
+  "http_clients": [{ "tag": "direct-download" }],
   "dns": {
     "servers": [
       { "type": "https", "tag": "local-dns", "server": "223.5.5.5", "path": "/dns-query" },

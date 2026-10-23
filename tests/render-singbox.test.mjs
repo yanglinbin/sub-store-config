@@ -55,3 +55,14 @@ test('模板里的 selector 都带 interrupt_exist_connections', () => {
   assert.ok(selectors.length >= 4);
   assert.ok(selectors.every((s) => s.interrupt_exist_connections === true));
 });
+
+test('http_clients 不能 detour 到空 direct outbound（运行时才会报错）', () => {
+  const c = render();
+  const client = c.http_clients[0];
+  assert.equal(client.tag, 'direct-download');
+  assert.equal(
+    'detour' in client,
+    false,
+    'sing-box 会报 "detour to an empty direct outbound makes no sense"，应省略 detour',
+  );
+});

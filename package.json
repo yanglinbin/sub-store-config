@@ -8,7 +8,8 @@
   "scripts": {
     "build": "node build/build.mjs",
     "test": "node --test tests/",
-    "validate": "node build/validate.mjs"
+    "validate": "node build/validate.mjs",
+    "probe": "node build/probe.mjs"
   },
   "keywords": [],
   "author": "",
