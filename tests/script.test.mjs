@@ -78,3 +78,62 @@ test('mihomo 脚本按 config.proxies 重建 proxy-groups', async () => {
   assert.equal(byName.proxies.proxies.at(-1), 'DIRECT');
   assert.ok(byName.proxies.proxies.includes('🇭🇰Hong Kong 03'));
 });
+
+async function runSingboxWith(produceArtifact) {
+  await emitScripts({ regionsPath: 'config/regions.yaml', outDir });
+  const code = readFileSync(join(outDir, 'singbox.js'), 'utf8');
+  const ctx = { $arguments: { name: 'kitty' }, $files: [template], $content: null, produceArtifact, console };
+  vm.createContext(ctx);
+  await vm.runInContext(`(async () => {\n${code}\n})()`, ctx);
+  return JSON.parse(ctx.$content);
+}
+
+test('produceArtifact 在宏任务里 resolve 时也等得到（不能是悬浮 Promise）', async () => {
+  const cfg = await runSingboxWith(
+    () =>
+      new Promise((resolve) =>
+        setTimeout(() => resolve([{ type: 'vless', tag: '🇭🇰Hong Kong 03' }]), 5),
+      ),
+  );
+  const byTag = Object.fromEntries(cfg.outbounds.map((o) => [o.tag, o]));
+  assert.ok(byTag.proxies.outbounds.includes('🇭🇰Hong Kong 03'));
+});
+
+test('produceArtifact 返回 {outbounds:[...]} 形态时也能用', async () => {
+  const cfg = await runSingboxWith(async () => ({
+    outbounds: [{ type: 'vless', tag: '🇺🇸United States 01' }],
+    endpoints: [],
+  }));
+  const byTag = Object.fromEntries(cfg.outbounds.map((o) => [o.tag, o]));
+  assert.ok(byTag.proxies.outbounds.includes('🇺🇸United States 01'));
+});
+
+test('脚本产出的配置能被 sing-box 接受，且成员顺序符合规范', async () => {
+  const { writeFileSync } = await import('node:fs');
+  const { execFileSync } = await import('node:child_process');
+
+  const cfg = await runSingbox([
+    { type: 'vless', tag: '🇭🇰Hong Kong 03' },
+    { type: 'vless', tag: '🇺🇸United States 01' },
+    { type: 'vless', tag: '🇯🇵Japan 01' },
+  ]);
+  const byTag = Object.fromEntries(cfg.outbounds.map((o) => [o.tag, o]));
+
+  assert.equal(byTag.final.outbounds[0], 'DIRECT');
+  assert.equal(byTag.final.default, 'DIRECT');
+  assert.equal(byTag.direct.outbounds[0], 'DIRECT');
+  assert.equal(byTag.f1tv.outbounds[0], '美国');
+  assert.equal(byTag.f1tv.outbounds.at(-1), 'DIRECT');
+  assert.equal(byTag.proxies.outbounds.at(-1), 'DIRECT');
+  assert.deepEqual(byTag.proxies.outbounds.slice(0, 3), ['香港', '日本', '美国']);
+
+  const file = join(outDir, 'e2e.json');
+  writeFileSync(file, JSON.stringify(cfg));
+  let hasSingBox = true;
+  try {
+    execFileSync('sing-box', ['version'], { stdio: 'ignore' });
+  } catch {
+    hasSingBox = false;
+  }
+  if (hasSingBox) execFileSync('sing-box', ['check', '-c', file], { stdio: 'pipe' });
+});

@@ -53,3 +53,11 @@ test('两端都用 DIRECT 大写（sing-box 里 direct 组名与 outbound tag �
   const sb = buildGroupDefs({ names, regions, style: 'singbox' });
   assert.equal(sb.find((d) => d.name === 'final').members[0], 'DIRECT');
 });
+
+test('短关键词按词边界匹配，避免 Australia/Economy/Sweden 误判', () => {
+  assert.equal(detectRegion('🇦🇺 Australia 01', regions), null);
+  assert.equal(detectRegion('IPLC-01-Economy', regions), null);
+  assert.equal(detectRegion('🇸🇪 Sweden 01', regions), null);
+  assert.equal(detectRegion('US-01', regions), '美国');
+  assert.equal(detectRegion('my02', regions), '马来西亚');
+});

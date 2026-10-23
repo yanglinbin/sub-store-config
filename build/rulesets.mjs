@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { parse } from 'yaml';
-import { parseClashText, normalizeCustom, dedupe, toHeadless, toMihomoLines } from './parse.mjs';
+import { parseClashText, normalizeCustom, dedupe, toHeadless, toMihomoPayload } from './parse.mjs';
 
 /** behavior → 无类型纯值的默认 clash 类型（geoip 的 text/*.txt 是裸 CIDR） */
 const DEFAULT_TYPE_OF = { domain: 'DOMAIN', ipcidr: 'IP-CIDR', classical: 'DOMAIN' };
@@ -60,7 +60,15 @@ export async function writeRuleSets({
     const { entries } = await buildRuleSet(entry.module, mod, { rootDir, fetcher });
 
     writeFileSync(join(jsonDir, `${entry.module}.json`), JSON.stringify(toHeadless(entries), null, 2) + '\n');
-    writeFileSync(join(listDir, `${entry.module}.list`), toMihomoLines(entries).join('\n') + '\n');
+
+    // mihomo 的 yaml rule-provider 必须是 { payload: [...] }；单引号转义成两个单引号
+    const payload = toMihomoPayload(entries, mod.behavior);
+    writeFileSync(
+      join(listDir, `${entry.module}.list`),
+      'payload:\n' +
+        payload.map((line) => `  - '${String(line).replace(/'/g, "''")}'`).join('\n') +
+        '\n',
+    );
     written.push(`singbox/rules/${entry.module}.json`, `mihomo/rules/${entry.module}.list`);
   }
   return written;

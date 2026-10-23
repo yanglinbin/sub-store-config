@@ -66,7 +66,10 @@ test('writeRuleSets 只产出 order 里列出的模块', async () => {
   });
   assert.deepEqual(files.sort(), ['mihomo/rules/a.list', 'singbox/rules/a.json']);
   assert.ok(existsSync(join(distDir, 'singbox/rules/a.json')));
-  assert.equal(readFileSync(join(distDir, 'mihomo/rules/a.list'), 'utf8'), 'DOMAIN,a.com\n');
+  assert.equal(
+    readFileSync(join(distDir, 'mihomo/rules/a.list'), 'utf8'),
+    "payload:" + String.fromCharCode(10) + "  - 'a.com'" + String.fromCharCode(10),
+  );
 });
 
 test('十万条级别的上游文件不爆栈（reject.txt 实测 20 万条）', async () => {
@@ -78,4 +81,33 @@ test('十万条级别的上游文件不爆栈（reject.txt 实测 20 万条）',
     { rootDir: root, fetcher: fakeFetcher({ 'https://x/big.txt': 'payload:\n  - ' + big.split('\n').join('\n  - ') }) },
   );
   assert.equal(entries.length, 200_000);
+});
+
+test('写出的 .list 是合法 YAML payload，且条目形态与 behavior 匹配', async () => {
+  const { parse } = await import('yaml');
+  const root = fixture();
+  const distDir = join(root, 'dist');
+  await writeRuleSets({
+    rootDir: root,
+    distDir,
+    modules: {
+      d: { behavior: 'domain', sources: ['https://x/d.txt'] },
+      i: { behavior: 'ipcidr', sources: ['https://x/i.txt'] },
+      c: { behavior: 'classical', sources: ['https://x/c.txt'] },
+    },
+    order: [
+      { module: 'd', target: 'direct' },
+      { module: 'i', target: 'direct' },
+      { module: 'c', target: 'direct' },
+    ],
+    fetcher: fakeFetcher({
+      'https://x/d.txt': 'payload:\n  - DOMAIN-SUFFIX,a.com\n',
+      'https://x/i.txt': 'payload:\n  - 1.1.1.0/24\n',
+      'https://x/c.txt': 'payload:\n  - PROCESS-NAME,x.exe\n',
+    }),
+  });
+  const read = (m) => parse(readFileSync(join(distDir, `mihomo/rules/${m}.list`), 'utf8'));
+  assert.deepEqual(read('d').payload, ['+.a.com']);
+  assert.deepEqual(read('i').payload, ['1.1.1.0/24']);
+  assert.deepEqual(read('c').payload, ['PROCESS-NAME,x.exe']);
 });

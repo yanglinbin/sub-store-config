@@ -129,9 +129,35 @@ export function toHeadless(entries, version = 3) {
   return { version, rules };
 }
 
-/** Entry[] → mihomo rule-provider payload 行（保持 clash 类型名）。 */
+/** Entry[] → mihomo rule-provider payload 行（保持 clash 类型名，供 classical 行为用）。 */
 export function toMihomoLines(entries) {
   return entries.map(({ type, value }) => `${type},${value}`);
+}
+
+/**
+ * Entry[] → mihomo rule-provider 的 payload 条目，形态随 behavior 变化：
+ *  - domain：`DOMAIN-SUFFIX` → `+.x`，`DOMAIN` → `x`（关键词/正则/进程在该行为下无法表达，直接抛错）
+ *  - ipcidr：裸 CIDR
+ *  - classical：完整规则行
+ */
+export function toMihomoPayload(entries, behavior) {
+  if (behavior === 'classical') return toMihomoLines(entries);
+  if (behavior === 'ipcidr') {
+    return entries.map(({ type, value }) => {
+      if (type !== 'IP-CIDR' && type !== 'IP-CIDR6') {
+        throw new Error(`ipcidr 行为不支持条目类型: ${type},${value}`);
+      }
+      return value;
+    });
+  }
+  if (behavior === 'domain') {
+    return entries.map(({ type, value }) => {
+      if (type === 'DOMAIN-SUFFIX') return `+.${value}`;
+      if (type === 'DOMAIN') return value;
+      throw new Error(`domain 行为不支持条目类型: ${type},${value}（改用 classical）`);
+    });
+  }
+  throw new Error(`behavior 非法: ${behavior}`);
 }
 
 /** 按 `type + 空格 + value` 去重，保持首次出现顺序。 */

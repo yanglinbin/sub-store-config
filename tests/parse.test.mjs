@@ -5,6 +5,7 @@ import {
   normalizeCustom,
   toHeadless,
   toMihomoLines,
+  toMihomoPayload,
   dedupe,
 } from '../build/parse.mjs';
 
@@ -74,4 +75,23 @@ test('mihomo 行输出保持原类型', () => {
     'DOMAIN-SUFFIX,a.com',
     'IP-CIDR,1.1.1.0/24',
   ]);
+});
+
+test('mihomo payload：domain 写 +.x / ipcidr 写裸 CIDR / classical 写规则行', () => {
+  assert.deepEqual(
+    toMihomoPayload(parseClashText('DOMAIN-SUFFIX,a.com\n+.b.com'), 'domain'),
+    ['+.a.com', '+.b.com'],
+  );
+  assert.deepEqual(
+    toMihomoPayload(parseClashText('1.1.1.0/24\n2001:db8::/32', { defaultType: 'IP-CIDR' }), 'ipcidr'),
+    ['1.1.1.0/24', '2001:db8::/32'],
+  );
+  assert.deepEqual(
+    toMihomoPayload(parseClashText('PROCESS-NAME,x.exe\nDOMAIN,c.com'), 'classical'),
+    ['PROCESS-NAME,x.exe', 'DOMAIN,c.com'],
+  );
+  assert.throws(
+    () => toMihomoPayload(parseClashText('DOMAIN-KEYWORD,kw'), 'domain'),
+    /DOMAIN-KEYWORD/,
+  );
 });
