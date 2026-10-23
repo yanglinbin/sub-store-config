@@ -888,7 +888,7 @@ Expected: FAIL，模块/产物不存在
 
 - [ ] **Step 4: 实现 `lib/grouping.mjs`**
 
-`buildGroupDefs` 输出顺序固定为 `['direct','f1tv','final','proxies', ...地区组]`（测试依赖该顺序）。`detectRegion` 先按 `regions` 顺序逐个比 `flag` 是否包含在 `name`，再比 `keywords`（`name.toLowerCase().includes(kw.toLowerCase())`）。地区组顺序 = `regions.yaml` 中出现的顺序（测试断言 `香港,美国,日本`）。
+`buildGroupDefs` 输出顺序固定为 `['proxies','f1tv','direct','final', ...地区组]`（测试依赖该顺序）。`detectRegion` 先按 `regions` 顺序逐个比 `flag` 是否包含在 `name`，再比 `keywords`（`name.toLowerCase().includes(kw.toLowerCase())`）。地区组顺序 = `regions.yaml` 中出现的顺序（测试断言 `香港,美国,日本`）。
 
 - [ ] **Step 5: 实现 `templates/script-singbox.js.tpl` 与 `templates/script-mihomo.js.tpl` + `build/emit-script.mjs`**
 

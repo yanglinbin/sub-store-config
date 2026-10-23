@@ -134,13 +134,13 @@ category-ads-all → private → lancidr → f1tv → microsoft → apple → ic
 
 策略组：
 
-| 组 | 成员顺序 | 默认 |
+| 组（按显示顺序） | 成员顺序 | 默认 |
 |---|---|---|
-| `direct` | `DIRECT` → 地区组 → `proxies` | `DIRECT` |
-| `final` | `DIRECT` → 地区组 → `proxies` | `DIRECT` |
 | `proxies` | 地区组 → 全部节点 → `DIRECT` | 第一个地区组 |
 | `f1tv` | `美国` → 其他地区组 → `proxies` → `DIRECT` | `美国` |
-| 地区组（有节点才生成） | 该地区节点（urltest） | — |
+| `direct` | `DIRECT` → 地区组 → `proxies` | `DIRECT` |
+| `final` | `DIRECT` → 地区组 → `proxies` | `DIRECT` |
+| 地区组（有节点才生成，排在最后） | 该地区节点（urltest） | — |
 
 `DIRECT` 位置规则：只有默认就是直连的 `direct` / `final` 把它放首位，其余放末位。
 

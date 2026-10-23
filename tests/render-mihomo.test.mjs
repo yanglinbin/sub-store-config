@@ -47,6 +47,6 @@ test('rules 顺序 = order.yaml 顺序，target 映射正确，no-resolve 生效
 
 test('fallback 骨架包含四个组且非空', () => {
   const c = render();
-  assert.deepEqual(c['proxy-groups'].map((g) => g.name), ['proxies', 'direct', 'f1tv', 'final']);
+  assert.deepEqual(c['proxy-groups'].map((g) => g.name), ['proxies', 'f1tv', 'direct', 'final']);
   assert.ok(c['proxy-groups'].every((g) => g.proxies.length >= 1));
 });

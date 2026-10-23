@@ -41,7 +41,7 @@ test('direct/final 的 DIRECT 在首位，proxies 的 DIRECT 在末位', () => {
 
 test('零节点不生成地区组，且 proxies 仍非空', () => {
   const defs = buildGroupDefs({ names: [], regions, style: 'mihomo' });
-  assert.deepEqual(defs.map((d) => d.name), ['direct', 'f1tv', 'final', 'proxies']);
+  assert.deepEqual(defs.map((d) => d.name), ['proxies', 'f1tv', 'direct', 'final']);
   assert.deepEqual(defs.find((d) => d.name === 'proxies').members, ['DIRECT']);
   assert.ok(defs.every((d) => d.members.length > 0));
 });
@@ -60,4 +60,12 @@ test('短关键词按词边界匹配，避免 Australia/Economy/Sweden 误判', 
   assert.equal(detectRegion('🇸🇪 Sweden 01', regions), null);
   assert.equal(detectRegion('US-01', regions), '美国');
   assert.equal(detectRegion('my02', regions), '马来西亚');
+});
+
+test('组顺序：proxies → f1tv → direct → final → 地区组', () => {
+  const defs = buildGroupDefs({ names, regions, style: 'singbox' });
+  assert.deepEqual(
+    defs.map((d) => d.name),
+    ['proxies', 'f1tv', 'direct', 'final', '香港', '日本', '美国'],
+  );
 });

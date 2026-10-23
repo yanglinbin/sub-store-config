@@ -276,7 +276,7 @@ f1tv:
 
 | 组 | 类型 | 成员（顺序即默认优先级） |
 |---|---|---|
-| `proxies` | select | 全部地区组 → `全部节点` → `DIRECT`（**末位**） |
+| `proxies` | select | 全部地区组 → `全部节点` → `DIRECT`（**末位**）；显示顺序第一 |
 | `direct` | select | `DIRECT`（**首位**，本组默认项）→ 全部地区组 → `proxies` |
 | `f1tv` | select | `美国`（美国组存在则首位，否则 `proxies`）→ 其他地区组 → `proxies` → `DIRECT`（**末位**） |
 | `final` | select | `DIRECT`（**首位**，本组默认项）→ 全部地区组 → `proxies` |

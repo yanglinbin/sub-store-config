@@ -27,7 +27,7 @@ export function renderMihomo({ regions, order, modules, baseUrl, rootDir = proce
     return parts.join(',');
   });
 
-  const fallbackGroups = ['proxies', 'direct', 'f1tv', 'final'].map((name) => ({
+  const fallbackGroups = ['proxies', 'f1tv', 'direct', 'final'].map((name) => ({
     name,
     type: 'select',
     proxies: ['DIRECT'],
