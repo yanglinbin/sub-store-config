@@ -4,14 +4,14 @@ import { resolve } from 'node:path';
 const TPL = 'templates/singbox.json.tpl';
 
 /** 只做模板替换与自检；策略组由 Sub-Store 脚本在运行时重建。 */
-export function renderSingbox({ regions, order, modules, baseUrl, rootDir = process.cwd() }) {
+export function renderSingbox({ regions, order, modules, baseUrl, rootDir = process.cwd(), format = 'binary', ext = 'srs' }) {
   const tpl = readFileSync(resolve(rootDir, TPL), 'utf8');
 
   const ruleSet = order.map(({ module }) => ({
     type: 'remote',
     tag: module,
-    format: 'binary',
-    url: `${baseUrl}/singbox/rules/${module}.srs`,
+    format,
+    url: `${baseUrl}/singbox/rules/${module}.${ext}`,
     update_interval: '1d',
   }));
 

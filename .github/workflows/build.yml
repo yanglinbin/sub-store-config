@@ -1,0 +1,57 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/**'
+      - 'rules/**'
+      - 'templates/**'
+      - 'lib/**'
+      - 'build/**'
+      - 'tests/**'
+      - '.github/workflows/build.yml'
+  schedule:
+    - cron: '0 4 * * *' # 每天 04:00 UTC 拉上游重建
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: 安装 sing-box（校验 + 后续可编 .srs 用）
+        run: |
+          curl -fsSL -o sb.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.14.3/sing-box-1.14.3-linux-amd64.tar.gz
+          tar xzf sb.tar.gz
+          sudo install -m755 sing-box-1.14.3-linux-amd64/sing-box /usr/local/bin/sing-box
+          sing-box version
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - name: 把 dist 推到 dist 分支（单 commit，强制覆盖）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd dist
+          git init -q
+          git checkout -q -b dist
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -qm "build: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dist
