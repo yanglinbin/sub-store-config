@@ -10,6 +10,8 @@ on:
       - 'lib/**'
       - 'build/**'
       - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/build.yml'
   schedule:
     - cron: '0 4 * * *' # 每天 04:00 UTC 拉上游重建
@@ -40,9 +42,31 @@ jobs:
           sudo install -m755 sing-box-1.14.3-linux-amd64/sing-box /usr/local/bin/sing-box
           sing-box version
 
+      - name: 缓存上游规则（拉不到时兜底，避免 jsdelivr 抖动导致构建失败）
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: rules-cache-${{ github.run_id }}
+          restore-keys: rules-cache-
+
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+      - name: 安装 mihomo 并校验生成的 mihomo 配置
+        run: |
+          set -e
+          V=1.19.33
+          URL="https://github.com/MetaCubeX/mihomo/releases/download/v${V}/mihomo-linux-amd64-v${V}.gz"
+          if curl -fsSL --retry 3 -o mihomo.gz "$URL"; then
+            gunzip -f mihomo.gz
+            sudo install -m755 mihomo /usr/local/bin/mihomo
+            mihomo -v
+            mihomo -t -f dist/mihomo/config.yaml
+            echo "mihomo -t OK"
+          else
+            echo "::warning::mihomo 下载失败，跳过 mihomo -t"
+          fi
 
       - name: 把 dist 推到 dist 分支（单 commit，强制覆盖）
         env:

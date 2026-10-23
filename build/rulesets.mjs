@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { parse } from 'yaml';
 import { parseClashText, normalizeCustom, dedupe, toHeadless, toMihomoPayload } from './parse.mjs';
@@ -47,6 +47,9 @@ export async function writeRuleSets({
   const dist = isAbsolute(distDir) ? distDir : resolve(rootDir, distDir);
   const jsonDir = join(dist, 'singbox/rules');
   const listDir = join(dist, 'mihomo/rules');
+  // 先清掉上一次的产物，避免 order 删模块后留下孤儿文件
+  rmSync(jsonDir, { recursive: true, force: true });
+  rmSync(listDir, { recursive: true, force: true });
   mkdirSync(jsonDir, { recursive: true });
   mkdirSync(listDir, { recursive: true });
 
@@ -72,4 +75,19 @@ export async function writeRuleSets({
     written.push(`singbox/rules/${entry.module}.json`, `mihomo/rules/${entry.module}.list`);
   }
   return written;
+}
+
+/** 统计 dist/singbox/rules/*.json 里的规则条目总数（用于 build-info）。 */
+export function countEntries(distDir = 'dist') {
+  const dir = join(distDir, 'singbox/rules');
+  let total = 0;
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
+    const doc = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+    for (const rule of doc.rules ?? []) {
+      for (const values of Object.values(rule)) {
+        if (Array.isArray(values)) total += values.length;
+      }
+    }
+  }
+  return total;
 }

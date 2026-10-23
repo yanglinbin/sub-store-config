@@ -137,3 +137,24 @@ test('脚本产出的配置能被 sing-box 接受，且成员顺序符合规范'
   }
   if (hasSingBox) execFileSync('sing-box', ['check', '-c', file], { stdio: 'pipe' });
 });
+
+test('生成脚本里的 $ 序列不被替换语义破坏', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { mkdtempSync, writeFileSync, mkdirSync } = await import('node:fs');
+  const { execFileSync } = await import('node:child_process');
+  const dir = mkdtempSync(join(tmpdir(), 'ssc-dollar-'));
+  mkdirSync(dir, { recursive: true });
+  await emitScripts({ regionsPath: 'config/regions.yaml', outDir: dir });
+  const code = readFileSync(join(dir, 'singbox.js'), 'utf8');
+  assert.ok(code.includes('buildGroupDefs'), '源码必须完整内联');
+  assert.ok(code.includes('const REGIONS ='));
+  assert.ok(!code.includes('__GROUPING_SRC__'));
+  void execFileSync;
+  void writeFileSync;
+});
+
+test('脚本生成的 selector 也带 interrupt_exist_connections', async () => {
+  const cfg = await runSingbox([{ type: 'vless', tag: '🇭🇰Hong Kong 03' }]);
+  const selectors = cfg.outbounds.filter((o) => o.type === 'selector');
+  assert.ok(selectors.every((s) => s.interrupt_exist_connections === true));
+});

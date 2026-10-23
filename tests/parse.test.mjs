@@ -95,3 +95,14 @@ test('mihomo payload：domain 写 +.x / ipcidr 写裸 CIDR / classical 写规则
     /DOMAIN-KEYWORD/,
   );
 });
+
+test('三列规则与行尾注释：前者报错，后者剥掉', () => {
+  assert.throws(() => parseClashText('DOMAIN-SUFFIX,a.com,DIRECT'), /逗号|多列/);
+  assert.throws(() => parseClashText('IP-CIDR,1.2.3.0/24,no-resolve'), /逗号|多列/);
+  assert.deepEqual(parseClashText('DOMAIN,a.com # 说明'), [{ type: 'DOMAIN', value: 'a.com' }]);
+});
+
+test('normalizeCustom 遇到非字符串条目必须报错（不能静默丢弃）', () => {
+  assert.throws(() => normalizeCustom({ domain_suffix: [123] }, 'domain'), /字符串/);
+  assert.throws(() => normalizeCustom({ domain_suffix: [['a.com']] }, 'domain'), /字符串/);
+});

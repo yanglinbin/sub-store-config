@@ -28,10 +28,10 @@
     { "type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": 7890 }
   ],
   "outbounds": [
-    { "type": "selector", "tag": "proxies", "outbounds": ["DIRECT"], "default": "DIRECT" },
-    { "type": "selector", "tag": "direct", "outbounds": ["DIRECT"] },
-    { "type": "selector", "tag": "f1tv", "outbounds": ["DIRECT"] },
-    { "type": "selector", "tag": "final", "outbounds": ["DIRECT"], "default": "DIRECT" },
+    { "type": "selector", "tag": "proxies", "outbounds": ["DIRECT"], "default": "DIRECT", "interrupt_exist_connections": true },
+    { "type": "selector", "tag": "direct", "outbounds": ["DIRECT"], "interrupt_exist_connections": true },
+    { "type": "selector", "tag": "f1tv", "outbounds": ["DIRECT"], "interrupt_exist_connections": true },
+    { "type": "selector", "tag": "final", "outbounds": ["DIRECT"], "default": "DIRECT", "interrupt_exist_connections": true },
     { "type": "direct", "tag": "DIRECT" }
   ],
   "route": {

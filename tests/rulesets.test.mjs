@@ -111,3 +111,35 @@ test('写出的 .list 是合法 YAML payload，且条目形态与 behavior 匹�
   assert.deepEqual(read('i').payload, ['1.1.1.0/24']);
   assert.deepEqual(read('c').payload, ['PROCESS-NAME,x.exe']);
 });
+
+test('重建时清掉 dist 里的孤儿产物', async () => {
+  const root = fixture();
+  const distDir = join(root, 'dist');
+  mkdirSync(join(distDir, 'mihomo/rules'), { recursive: true });
+  mkdirSync(join(distDir, 'singbox/rules'), { recursive: true });
+  writeFileSync(join(distDir, 'mihomo/rules/gone.list'), 'payload:\n  - x\n');
+  writeFileSync(join(distDir, 'singbox/rules/gone.json'), '{"version":3,"rules":[]}\n');
+  await writeRuleSets({
+    rootDir: root,
+    distDir,
+    modules: { a: { behavior: 'domain', sources: ['https://x/a.txt'] } },
+    order: [{ module: 'a', target: 'direct' }],
+    fetcher: fakeFetcher({ 'https://x/a.txt': 'DOMAIN,a.com' }),
+  });
+  assert.equal(existsSync(join(distDir, 'mihomo/rules/gone.list')), false);
+  assert.equal(existsSync(join(distDir, 'singbox/rules/gone.json')), false);
+});
+
+test('countEntries 统计的是规则条数而不是模块数', async () => {
+  const { countEntries } = await import('../build/rulesets.mjs');
+  const root = fixture();
+  const distDir = join(root, 'dist');
+  await writeRuleSets({
+    rootDir: root,
+    distDir,
+    modules: { a: { behavior: 'domain', sources: ['https://x/a.txt'] } },
+    order: [{ module: 'a', target: 'direct' }],
+    fetcher: fakeFetcher({ 'https://x/a.txt': 'DOMAIN,a.com\nDOMAIN,b.com\nDOMAIN,c.com' }),
+  });
+  assert.equal(countEntries(distDir), 3);
+});

@@ -57,6 +57,7 @@ export function parseClashText(text, { defaultType = 'DOMAIN' } = {}) {
     if (line.startsWith('- ')) line = line.slice(2).trim();
     else if (line.startsWith('-')) line = line.slice(1).trim();
     line = stripQuotes(line).trim();
+    line = line.replace(/\s+#.*$/, '').trim(); // 行尾注释
     if (line === '') continue;
 
     if (line.startsWith('+.')) {
@@ -72,6 +73,9 @@ export function parseClashText(text, { defaultType = 'DOMAIN' } = {}) {
 
     const type = line.slice(0, comma).trim().toUpperCase();
     const value = line.slice(comma + 1).trim();
+    if (value.includes(',')) {
+      throw new Error(`规则值里出现多余逗号（多列规则不被支持）: ${line}`);
+    }
     if (!(type in FIELD_OF)) {
       throw new Error(`不支持的规则类型: ${type}（原文: ${line}）`);
     }
@@ -96,7 +100,10 @@ export function normalizeCustom(obj, behavior) {
     }
     if (!Array.isArray(values)) throw new Error(`自定义规则字段 ${field} 必须是数组`);
     for (const v of values) {
-      if (typeof v !== 'string' || v.trim() === '') continue;
+      if (typeof v !== 'string') {
+        throw new Error(`自定义规则 ${field} 的条目必须是字符串（收到 ${typeof v}）`);
+      }
+      if (v.trim() === '') continue;
       const list = buckets.get(field) ?? [];
       list.push(stripQuotes(v.trim()));
       buckets.set(field, list);

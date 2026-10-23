@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadAll } from './load.mjs';
 import { createFetcher } from './fetch.mjs';
-import { writeRuleSets } from './rulesets.mjs';
+import { writeRuleSets, countEntries } from './rulesets.mjs';
 import { renderMihomo } from './render-mihomo.mjs';
 import { renderSingbox } from './render-singbox.mjs';
 import { emitScripts } from './emit-script.mjs';
@@ -44,10 +44,10 @@ console.log('[3/5] 两端模板已渲染');
 const scripts = await emitScripts({ outDir: join(DIST, 'scripts') });
 console.log(`[4/5] 脚本 ${scripts.length} 个`);
 
-const ruleCount = rulesetFiles.length / 2;
+const entryCount = countEntries(DIST);
 writeFileSync(
   join(DIST, 'build-info.json'),
-  JSON.stringify({ builtAt: new Date().toISOString(), baseUrl: BASE_URL, counts: { modules: order.length, rules: ruleCount, files: rulesetFiles.length } }, null, 2) + '\n',
+  JSON.stringify({ builtAt: new Date().toISOString(), baseUrl: BASE_URL, counts: { modules: order.length, entries: entryCount, files: rulesetFiles.length } }, null, 2) + '\n',
 );
 
 const result = await validateDist({ distDir: DIST, baseUrl: BASE_URL });

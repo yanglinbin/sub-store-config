@@ -41,7 +41,12 @@ const regionOutbounds = defs
 const selectOutbounds = defs
   .filter((d) => d.type === 'select')
   .map((d) => {
-    const out = { type: 'selector', tag: d.name, outbounds: d.members };
+    const out = {
+      type: 'selector',
+      tag: d.name,
+      outbounds: d.members,
+      interrupt_exist_connections: true,
+    };
     if (d.default) out.default = d.default;
     return out;
   });

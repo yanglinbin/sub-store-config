@@ -48,3 +48,10 @@ test('tun 双栈 + fakeip 含 v6 段 + final=final', () => {
   assert.equal(fakeip.inet6_range, 'fc00::/18');
   assert.equal(c.route.final, 'final');
 });
+
+test('模板里的 selector 都带 interrupt_exist_connections', () => {
+  const c = render();
+  const selectors = c.outbounds.filter((o) => o.type === 'selector');
+  assert.ok(selectors.length >= 4);
+  assert.ok(selectors.every((s) => s.interrupt_exist_connections === true));
+});
