@@ -24,11 +24,11 @@ const template = JSON.stringify(
   2,
 );
 
-async function runSingbox(proxies) {
+async function runSingbox(proxies, args = { name: 'kitty' }) {
   await emitScripts({ regionsPath: 'config/regions.yaml', outDir });
   const code = readFileSync(join(outDir, 'singbox.js'), 'utf8');
   const ctx = {
-    $arguments: { name: 'kitty' },
+    $arguments: args,
     $files: [template],
     $content: null,
     produceArtifact: async () => proxies,
@@ -167,4 +167,49 @@ test('脚本生成的 selector 也带 interrupt_exist_connections', async () => 
   const cfg = await runSingbox([{ type: 'vless', tag: '🇭🇰Hong Kong 03' }]);
   const selectors = cfg.outbounds.filter((o) => o.type === 'selector');
   assert.ok(selectors.every((s) => s.interrupt_exist_connections === true));
+});
+
+test('支持从组合订阅取节点（#type=col）', async () => {
+  await emitScripts({ regionsPath: 'config/regions.yaml', outDir });
+  const code = readFileSync(join(outDir, 'singbox.js'), 'utf8');
+  const calls = [];
+  const ctx = {
+    $arguments: { name: 'air', type: 'col' },
+    $files: [template],
+    $content: null,
+    produceArtifact: async (opts) => {
+      calls.push(opts);
+      return [{ type: 'vless', tag: '🇭🇰Hong Kong 03' }];
+    },
+    console: undefined,
+  };
+  vm.createContext(ctx);
+  await vm.runInContext(`(async () => {
+${code}
+})()`, ctx);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].type, 'collection');
+  assert.equal(calls[0].name, 'air');
+  assert.ok(JSON.parse(ctx.$content).outbounds.some((o) => o.tag === '香港'));
+});
+
+test('默认仍按单条订阅取节点', async () => {
+  await emitScripts({ regionsPath: 'config/regions.yaml', outDir });
+  const code = readFileSync(join(outDir, 'singbox.js'), 'utf8');
+  const calls = [];
+  const ctx = {
+    $arguments: { name: 'kitty' },
+    $files: [template],
+    $content: null,
+    produceArtifact: async (opts) => {
+      calls.push(opts);
+      return [];
+    },
+    console: undefined,
+  };
+  vm.createContext(ctx);
+  await vm.runInContext(`(async () => {
+${code}
+})()`, ctx);
+  assert.equal(calls[0].type, 'subscription');
 });

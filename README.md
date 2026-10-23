@@ -123,6 +123,39 @@ npm run validate
 
 ---
 
+## 更换 / 新增订阅（机场）
+
+三个地方引用订阅名，**必须指向同一个**，否则 mihomo 与 sing-box 会拿到不同的节点集合：
+
+| 位置 | 字段 | 说明 |
+|---|---|---|
+| 文件 `clash` 的「从订阅添加节点」 | `sourceName` / `sourceType` | 决定 mihomo 拿谁的节点 |
+| 文件 `clash` 的脚本操作 | `#name=<名字>` | 只在脚本里做展示/调试用，实际节点来自上一步 |
+| 文件 `singbox` 的脚本操作 | `#name=<名字>&type=sub|col` | 决定 sing-box 拿谁的节点 |
+
+### 方案 A：原地换源（最省事，推荐）
+
+订阅名不变，只换 URL：订阅编辑页把远程订阅地址改成新的即可。
+下游三个引用全部照旧，不用动。
+
+### 方案 B：新建订阅，改指针
+
+1. 新建订阅 `kitty2`
+2. 文件 `clash` →「从订阅添加节点」：`sourceName` 改成 `kitty2`
+3. 文件 `clash` 脚本：`…/scripts/mihomo.js#name=kitty2&noCache=true`
+4. 文件 `singbox` 脚本：`…/scripts/singbox.js#name=kitty2&noCache=true`
+
+### 方案 C：组合订阅（长期多机场）
+
+1. 新建组合订阅 `air`，把 `kitty`、`kitty2`… 加进去
+2. 文件 `clash` →「从订阅添加节点」：来源类型选 `collection`（组合订阅），名字填 `air`
+3. 文件 `clash` 脚本：`#name=air&noCache=true`
+4. 文件 `singbox` 脚本：`#name=air&type=col&noCache=true`（`type=col` 告诉脚本按组合订阅取）
+5. 以后增删机场只改 `air`，两个文件都不用动
+
+> 换机场后如果节点命名风格变了（比如没有旗帜、国家写成别的语言），地区组会变少或归错类——
+> 在 `config/regions.yaml` 里补关键词即可，push 后自动生效。
+
 ## 分流行为
 
 规则顺序（`rules/order.yaml`）先窄后宽：
