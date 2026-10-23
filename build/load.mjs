@@ -1,0 +1,115 @@
+import { readFileSync, existsSync } from 'node:fs';
+import { isAbsolute, resolve } from 'node:path';
+import { parse } from 'yaml';
+
+const BEHAVIORS = new Set(['domain', 'ipcidr', 'classical']);
+const TARGETS = new Set(['reject', 'direct', 'proxies', 'f1tv']);
+
+function readYaml(path) {
+  const text = readFileSync(path, 'utf8');
+  try {
+    return parse(text);
+  } catch (err) {
+    throw new Error(`YAML 解析失败 (${path}): ${err.message}`);
+  }
+}
+
+/** 读取地区关键词表；name 原样成为组名。 */
+export function loadRegions(path) {
+  const raw = readYaml(path);
+  if (!Array.isArray(raw)) throw new Error(`regions 必须是数组: ${path}`);
+  return raw.map((item, i) => {
+    if (!item || typeof item.name !== 'string' || item.name.trim() === '') {
+      throw new Error(`regions[${i}].name 缺失或为空`);
+    }
+    if (typeof item.flag !== 'string' || item.flag === '') {
+      throw new Error(`regions[${i}].flag 缺失（${item.name}）`);
+    }
+    if (
+      !Array.isArray(item.keywords) ||
+      item.keywords.length === 0 ||
+      item.keywords.some((k) => typeof k !== 'string' || k === '')
+    ) {
+      throw new Error(`regions[${i}].keywords 必须是非空字符串数组（${item.name}）`);
+    }
+    return { name: item.name, flag: item.flag, keywords: [...item.keywords] };
+  });
+}
+
+/** 读取模块定义；behavior 决定产物形态。 */
+export function loadModules(path) {
+  const raw = readYaml(path);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`modules 必须是对象映射: ${path}`);
+  }
+  const modules = {};
+  for (const [name, def] of Object.entries(raw)) {
+    if (!def || typeof def !== 'object') throw new Error(`module "${name}" 定义非法`);
+    if (!BEHAVIORS.has(def.behavior)) {
+      throw new Error(`module "${name}" 的 behavior 非法: ${def.behavior}（只允许 domain/ipcidr/classical）`);
+    }
+    if (def.sources !== undefined) {
+      if (
+        !Array.isArray(def.sources) ||
+        def.sources.length === 0 ||
+        def.sources.some((u) => typeof u !== 'string' || !u.startsWith('https://'))
+      ) {
+        throw new Error(`module "${name}" 的 sources 必须是 https:// 字符串数组`);
+      }
+    }
+    if (def.custom !== undefined && (typeof def.custom !== 'string' || def.custom === '')) {
+      throw new Error(`module "${name}" 的 custom 必须是文件路径字符串`);
+    }
+    modules[name] = {
+      behavior: def.behavior,
+      ...(def.sources ? { sources: [...def.sources] } : {}),
+      ...(def.custom ? { custom: def.custom } : {}),
+    };
+  }
+  return modules;
+}
+
+/** 读取规则顺序；校验模块存在、不重复、目标组合法。 */
+export function loadOrder(path, { modules } = {}) {
+  const raw = readYaml(path);
+  if (!Array.isArray(raw)) throw new Error(`order 必须是数组: ${path}`);
+  const seen = new Set();
+  return raw.map((item, i) => {
+    if (!item || typeof item.module !== 'string' || item.module === '') {
+      throw new Error(`order[${i}].module 缺失或为空`);
+    }
+    if (!TARGETS.has(item.target)) {
+      throw new Error(`order[${i}].target 非法: ${item.target}（只允许 reject/direct/proxies/f1tv）`);
+    }
+    if (seen.has(item.module)) {
+      throw new Error(`order 中模块重复: ${item.module}`);
+    }
+    seen.add(item.module);
+    if (modules && !(item.module in modules)) {
+      throw new Error(`order 引用了不存在的模块: ${item.module}`);
+    }
+    const entry = { module: item.module, target: item.target };
+    if (item.no_resolve === true) entry.no_resolve = true;
+    return entry;
+  });
+}
+
+/** 读取三份真相文件，并校验交叉引用与自定义文件存在性。 */
+export function loadAll(rootDir = process.cwd()) {
+  const at = (p) => (isAbsolute(p) ? p : resolve(rootDir, p));
+  const regions = loadRegions(at('config/regions.yaml'));
+  const modules = loadModules(at('rules/modules.yaml'));
+  const order = loadOrder(at('rules/order.yaml'), { modules });
+
+  for (const [name, mod] of Object.entries(modules)) {
+    if (mod.custom && !existsSync(at(mod.custom))) {
+      throw new Error(`module "${name}" 的 custom 文件不存在: ${mod.custom}`);
+    }
+  }
+  for (const entry of order) {
+    if (!(entry.module in modules)) {
+      throw new Error(`order 引用了不存在的模块: ${entry.module}`);
+    }
+  }
+  return { regions, modules, order };
+}

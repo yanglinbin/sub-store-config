@@ -1,0 +1,11 @@
+# 地区关键词表：name 原样成为组名；keywords 大小写不敏感；flag 用于兜底识别
+- { name: 香港, flag: "🇭🇰", keywords: [香港, hk, hongkong, "hong kong"] }
+- { name: 台湾, flag: "🇹🇼", keywords: [台湾, 台灣, tw, taiwan] }
+- { name: 日本, flag: "🇯🇵", keywords: [日本, jp, japan, tokyo] }
+- { name: 美国, flag: "🇺🇸", keywords: [美国, 美國, us, usa, america, "united states"] }
+- { name: 新加坡, flag: "🇸🇬", keywords: [新加坡, sg, singapore] }
+- { name: 韩国, flag: "🇰🇷", keywords: [韩国, 韓國, kr, korea] }
+- { name: 马来西亚, flag: "🇲🇾", keywords: [马来西亚, 馬來西亞, my, malaysia] }
+- { name: 英国, flag: "🇬🇧", keywords: [英国, 英國, uk, "united kingdom", britain] }
+- { name: 德国, flag: "🇩🇪", keywords: [德国, 德國, de, germany] }
+- { name: 荷兰, flag: "🇳🇱", keywords: [荷兰, 荷蘭, nl, netherlands] }

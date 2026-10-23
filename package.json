@@ -1,0 +1,24 @@
+{
+  "name": "sub-store-config",
+  "version": "1.0.0",
+  "description": "Sub-Store 双端配置与自建模块化规则库",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "node build/build.mjs",
+    "test": "node --test tests/",
+    "validate": "node build/validate.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  }
+}

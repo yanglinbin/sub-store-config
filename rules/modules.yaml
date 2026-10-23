@@ -1,0 +1,43 @@
+# 模块定义：sources 为上游文本（域名类→clash-rules，IP 类→geoip），custom 为本仓库自定义条目
+category-ads-all:   # 即 Loyalsoldier 的 reject.txt（geosite:category-ads-all 的 clash 形态），纯上游，无 custom
+  behavior: domain
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"]
+gfw:
+  behavior: domain
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt"]
+private:
+  behavior: domain
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"]
+lancidr:
+  behavior: ipcidr
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/text/private.txt"]
+f1tv:
+  behavior: classical
+  custom: rules/custom/f1tv.yaml
+microsoft:
+  behavior: classical
+  custom: rules/custom/microsoft.yaml
+apple:
+  behavior: domain
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt"]
+icloud:
+  behavior: domain
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt"]
+steam:
+  behavior: classical
+  custom: rules/custom/steam.yaml
+applications:
+  behavior: classical
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt"]
+cncidr:
+  behavior: ipcidr
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/text/cn.txt"]
+telegramcidr:
+  behavior: ipcidr
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/text/telegram.txt"]
+direct:
+  behavior: domain
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"]
+proxy:
+  behavior: domain
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"]

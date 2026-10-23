@@ -1,0 +1,6 @@
+domain_suffix:
+  - formula1.com
+  - livetiming-proxy.multiviewer.dev
+  - api.multiviewer.dev
+process_name:
+  - MultiViewer.exe
