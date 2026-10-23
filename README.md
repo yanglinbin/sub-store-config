@@ -81,10 +81,17 @@ npm run validate
 | User-Agent | `clash.meta/v1.19.99`（按机场要求调整，优先 mihomo 订阅） |
 | 超时 | `10000` |
 
-「节点操作」只加 **一个脚本操作**（远程）：`https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/scripts/nodes.js`
+「节点操作」加 **三个自带算子**（推荐，零脚本维护）：
 
-它做三件事：剔除信息节点（正则来自 `config/node-filter.yaml`）、按 `name+server+port` 去重、按名称升序。
-比在前端拼「丢弃筛选 / 去重 / 排序」更省事，也保证两个客户端拿到完全一样的节点集合。
+| 顺序 | 算子 | 参数 |
+|---|---|---|
+| 1 | **正则筛选 Regex Filter** | `keep` 关闭（= 丢弃命中项），正则：`网址\|剩余\|流量\|重置\|套餐\|如遇\|永久\|官方\|群组\|欢迎\|官网\|频道\|个人\|到期\|续费\|免费` |
+| 2 | **节点去重 Handle Duplicate** | 动作 `delete`，去重字段 `name`、`server`、`port` |
+| 3 | **节点排序 Sort** | `asc` |
+
+> 注意：正则筛选默认 `keep: true`（只保留命中），留空正则会**把所有节点筛掉**。要"丢弃"必须把 keep 关掉。
+> 早期版本用的是 `scripts/nodes.js`（同样三件事，正则取自 `config/node-filter.yaml`）；脚本仍会生成，
+> 想用脚本就把上面三步换成一个脚本操作即可，两种方式效果等价。
 
 ### 2. 文件 `clash`（mihomo 用）
 
