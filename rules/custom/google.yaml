@@ -1,0 +1,44 @@
+# Google 全域（含大陆可直连的 google.cn / googleapis.cn / gstatic.cn）
+# 用户要求：这些一律走 proxies，不能因为解析到 CN IP 或被 direct/cncidr 命中而直连
+domain_suffix:
+  - google.com
+  - google.cn
+  - google.com.hk
+  - googleapis.com
+  - googleapis.cn
+  - gstatic.com
+  - gstatic.cn
+  - googleusercontent.com
+  - googlevideo.com
+  - googlesyndication.com
+  - googleadservices.com
+  - google-analytics.com
+  - googletagmanager.com
+  - googletagservices.com
+  - doubleclick.net
+  - ggpht.com
+  - gvt1.com
+  - gvt2.com
+  - ytimg.com
+  - youtube.com
+  - youtu.be
+  - yt.be
+  - youtube-nocookie.com
+  - youtubekids.com
+  - blogger.com
+  - blogspot.com
+  - blog.google
+  - chrome.com
+  - chromium.org
+  - android.com
+  - goo.gl
+  - g.co
+  - firebaseio.com
+  - firebaseapp.com
+  - crashlytics.com
+  - recaptcha.net
+  - withgoogle.com
+  - 1e100.net
+  - google.dev
+  - widevine.com
+  - xn--ngstr-lra8j.com

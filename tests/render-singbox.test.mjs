@@ -19,15 +19,10 @@ test('rule_set 按 order 顺序、url 指向 .srs、format=binary', () => {
     c.route.rule_set.map((r) => r.tag),
     loadAll().order.map((o) => o.module),
   );
-  assert.equal(c.route.rule_set.length, 4);
-  // IP 类走 geoip 官方 srs
-  const cn = c.route.rule_set.find((r) => r.tag === 'geoip-cn');
-  assert.equal(cn.url, 'https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/srs/cn.srs');
-  assert.equal(cn.format, 'binary');
-  assert.equal(cn.update_interval, '1d');
-  // 自建（目前只有 f1tv）
-  const f1 = c.route.rule_set.find((r) => r.tag === 'f1tv');
-  assert.equal(f1.url, `${BASE}/singbox/rules/f1tv.srs`);
+  assert.equal(c.route.rule_set.length, 16);
+  assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/airport.srs`);
+  assert.equal(c.route.rule_set[0].format, 'binary');
+  assert.equal(c.route.rule_set[0].update_interval, '1d');
 });
 
 test('route 规则与 order 一致（reject 用 action=reject）', () => {
@@ -37,16 +32,15 @@ test('route 规则与 order 一致（reject 用 action=reject）', () => {
   assert.deepEqual(c.route.rules[1], { action: 'hijack-dns', protocol: 'dns' });
   // 第一条 ipcidr 模块前必须自动插入 resolve，否则目标是 fakeip，geoip 规则永不命中
   const idxResolve = c.route.rules.findIndex((r) => r.action === 'resolve');
-  const idxFirstIp = c.route.rules.findIndex(
-    (r) => r.rule_set && c.route.rule_set.find((s) => s.tag === r.rule_set)?.tag.startsWith('geoip-'),
-  );
+  const idxFirstIp = c.route.rules.findIndex((r) => r.rule_set === 'lancidr');
   assert.ok(idxResolve > 0 && idxResolve < idxFirstIp, 'resolve 必须在第一条 IP 规则之前');
 
   const routeRules = c.route.rules.filter((r) => r.rule_set);
-  assert.equal(routeRules.length, 4);
-  assert.deepEqual(routeRules[0], { rule_set: 'geoip-private', action: 'route', outbound: 'direct' });
-  assert.deepEqual(routeRules[1], { rule_set: 'f1tv', action: 'route', outbound: 'f1tv' });
-  assert.ok(routeRules.some((r) => r.rule_set === 'geoip-cn' && r.outbound === 'direct'));
+  assert.equal(routeRules.length, 16);
+  assert.deepEqual(routeRules[0], { rule_set: 'airport', action: 'route', outbound: 'direct' });
+  assert.deepEqual(routeRules[1], { rule_set: 'category-ads-all', action: 'reject' });
+  const google = routeRules.find((r) => r.rule_set === 'google');
+  assert.deepEqual(google, { rule_set: 'google', action: 'route', outbound: 'proxies' });
 });
 
 test('1.14 约束：显式 http client、无 independent_cache、无 AAAA reject', () => {

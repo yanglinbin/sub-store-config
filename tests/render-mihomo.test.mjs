@@ -16,32 +16,45 @@ test('全局字段与 spec 一致', () => {
   assert.deepEqual(c.profile, { 'store-selected': true, 'store-fake-ip': false });
 });
 
-test('rule-providers：geoip 远程模块 + 自建 f1tv', () => {
+test('rule-providers：全部来自 clash-rules 构建产物', () => {
   const c = render();
-  assert.deepEqual(Object.keys(c['rule-providers']), ['geoip-private', 'f1tv', 'geoip-cn', 'geoip-telegram']);
+  assert.equal(Object.keys(c['rule-providers']).length, 16);
 
-  assert.deepEqual(c['rule-providers']['geoip-cn'], {
+  assert.deepEqual(c['rule-providers']['category-ads-all'], {
     type: 'http',
-    behavior: 'ipcidr',
-    format: 'mrs',
-    url: 'https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/mrs/cn.mrs',
-    path: './mrs/geoip/cn.mrs',
+    behavior: 'domain',
+    format: 'yaml',
+    url: `${BASE}/mihomo/rules/category-ads-all.list`,
+    path: './ruleset/category-ads-all.yaml',
     interval: 86400,
   });
-
-  assert.equal(c['rule-providers'].f1tv.url, `${BASE}/mihomo/rules/f1tv.list`);
-  assert.equal(c['rule-providers'].f1tv.format, 'yaml');
+  assert.equal(c['rule-providers'].cncidr.behavior, 'ipcidr');
   assert.equal(c['rule-providers'].f1tv.behavior, 'classical');
+  assert.equal(c['rule-providers'].google.url, `${BASE}/mihomo/rules/google.list`);
+  assert.equal(c['rule-providers'].airport.behavior, 'domain');
 });
 
-test('rules 顺序 = order.yaml 顺序，target 映射正确，no-resolve 生效', () => {
+test('rules 顺序 = order.yaml 顺序，target 映射正确，google 在 cncidr 之前', () => {
   const c = render();
   assert.deepEqual(c.rules, [
-    'RULE-SET,geoip-private,direct',
+    'RULE-SET,airport,direct',
+    'RULE-SET,category-ads-all,REJECT',
+    'RULE-SET,private,direct',
+    'RULE-SET,lancidr,direct',
     'RULE-SET,f1tv,f1tv',
-    'RULE-SET,geoip-cn,direct',
-    'RULE-SET,geoip-telegram,proxies',
+    'RULE-SET,google,proxies',
+    'RULE-SET,microsoft,direct',
+    'RULE-SET,apple,direct',
+    'RULE-SET,icloud,direct',
+    'RULE-SET,steam,direct',
+    'RULE-SET,applications,direct',
+    'RULE-SET,gfw,proxies',
+    'RULE-SET,cncidr,direct',
+    'RULE-SET,telegramcidr,proxies',
+    'RULE-SET,direct,direct',
+    'RULE-SET,proxy,proxies',
   ]);
+  assert.ok(c.rules.indexOf('RULE-SET,google,proxies') < c.rules.indexOf('RULE-SET,cncidr,direct'));
 });
 
 test('fallback 骨架包含四个组且非空', () => {

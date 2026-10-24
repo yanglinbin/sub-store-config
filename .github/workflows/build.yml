@@ -68,7 +68,7 @@ jobs:
             echo "::warning::mihomo 下载失败，跳过 mihomo -t"
           fi
 
-      - name: 运行时冒烟（sing-box 真跑 + mihomo -t 校验脚本产物）
+      - name: 运行时冒烟（sing-box 真跑本地 rule-set + mihomo -t 校验脚本产物）
         run: npm run probe
 
 
