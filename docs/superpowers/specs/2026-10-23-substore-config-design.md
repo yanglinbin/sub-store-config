@@ -272,10 +272,10 @@ f1tv:
 
 结论：IP 类已全部迁到 `geoip` 仓库；域名类没有可迁移的去处（除非自己解 protobuf），故保留 `clash-rules`。
 
-> **2026-10-24 现状（重构中，以代码为准）**：用户要求只保留 `Loyalsoldier/geoip` 一个上游、
-> 自建规则集只留 `f1tv`。当前 `rules/modules.yaml` 只有 4 个模块：
-> `geoip-cn` / `geoip-private` / `geoip-telegram`（remote）+ `f1tv`（built）。
-> 下文 §6 描述的 14 模块布局是**规划目标**，尚未恢复；规则集规划确定后再按本文档补齐。
+> **2026-10-25 现状（已重构完成）**：唯一上游 = `Loyalsoldier/clash-rules`（域名/IP/进程全量 11 个模块），
+> 自建 5 个模块：`airport`（机场入口直连）、`google`（Google 全域 → proxies，含 `google.cn`/`googleapis.cn`）、
+> `microsoft`、`steam`、`f1tv`。共 16 个模块，策略组保持极简（`proxies`/`direct`/`f1tv`/`final` + 动态地区组）。
+> sing-box 侧固定前置 `sniff` + `hijack-dns`，并在第一条 `ipcidr` 模块前自动插入 `resolve`（否则 fakeip 目标下 IP 规则永不命中）。
 
 ## 6. 分流规格
 

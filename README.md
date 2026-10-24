@@ -4,17 +4,37 @@
 
 - 节点：只来自你的机场订阅，Sub-Store 负责过滤/去重/排序
 - 规则：两端同源（`rules/order.yaml` + `rules/modules.yaml`）
-  - **当前处于重构中：只引用 `Loyalsoldier/geoip` 一个上游**（IP 类，直引官方 `srs` / `mrs`）
-  - **自建规则集只留 `f1tv`** 一个（其余自定义清单已删除，git 历史里可找回）
-  - 不引用 `clash-rules`、`meta-rules-dat` 或任何其他仓库
+  - **唯一上游：`Loyalsoldier/clash-rules`**（域名 + IP + 进程），CI 抓文本后转成两端产物
+  - 自建清单 5 个：`airport`（机场入口直连）、`google`（全域走代理）、`microsoft`、`steam`、`f1tv`
+  - 不引用 `geoip`、`meta-rules-dat`、`meta-rules-dat` 等其他仓库
 
-> ⚠️ 重构中的行为提醒：现在只有 **4 条规则**（`geoip-private` / `f1tv` / `geoip-cn` / `geoip-telegram`），
-> 全是 IP 维度。也就是说：
-> - 广告域名**不会被拦截**（没有 reject 规则）
-> - 非中国域名**不会因为域名规则走代理**——只有 Telegram 的 IP 段会走 `proxies`
-> - 其余流量落到 `final`（默认 `DIRECT`），想临时全走代理就在客户端点 `proxies` 组
->
-> 规则规划好之后，在 `modules.yaml` / `order.yaml` 加模块即可，模板与脚本不用动。
+### 规则顺序（16 个模块）
+
+```
+airport → category-ads-all(reject) → private → lancidr → f1tv
+→ google(proxies) → microsoft → apple → icloud → steam → applications
+→ gfw(proxies) → cncidr → telegramcidr(proxies) → direct → proxy(proxies)
+→ final(默认 DIRECT)
+```
+
+两个刻意的位置安排：
+
+- `airport` 放第一位：机场入口域名（`oh-node.com`）必须直连，否则"用代理连代理入口"会绕路
+- `google` 放 `cncidr` 之前：`google.cn` / `googleapis.cn` / `gstatic.cn` 在大陆可直连，按 IP 会被判成直连；
+  用户要求**这些 Google 域名一律走 `proxies`**
+
+### 客户端参数
+
+| 项 | mihomo | sing-box |
+|---|---|---|
+| 规则集来源 | `…@dist/mihomo/rules/*.list`（yaml） | `…@dist/singbox/rules/*.srs`（binary） |
+| 下载走 | 直连 CDN（jsDelivr） | 直连 CDN（jsDelivr） |
+| 策略组 | `proxies` / `f1tv` / `direct` / `final` + 动态地区组 | 同左 |
+| IPv6 | 开启 | 开启（fakeip 含 v6 段） |
+
+> 想改成"用代理拉 raw.githubusercontent.com"也是可行的（mihomo `rule-providers.<名称>.proxy: proxies`、
+> sing-box `http_clients[].detour: proxies`），代价是**代理没起来时规则集下不到、启动报 FATAL**。
+> 当前选择"直连 CDN"是为了让代理挂掉时客户端仍能启动。
 
 ## 目录
 
