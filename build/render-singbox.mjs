@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { geoipSrs, metaSrs } from './upstream.mjs';
+import { geoipSrs } from './upstream.mjs';
 
 const TPL = 'templates/singbox.json.tpl';
 
@@ -17,7 +17,7 @@ export function renderSingbox({ regions, order, modules, baseUrl, rootDir = proc
         type: 'remote',
         tag: module,
         format: 'binary',
-        url: mod.upstream === 'meta' ? metaSrs(mod.layer, mod.category) : geoipSrs(mod.category),
+        url: geoipSrs(mod.category),
         update_interval: '1d',
       };
     }
@@ -30,11 +30,25 @@ export function renderSingbox({ regions, order, modules, baseUrl, rootDir = proc
     };
   });
 
-  const rules = order.map(({ module, target }) =>
-    target === 'reject'
-      ? { rule_set: module, action: 'reject' }
-      : { rule_set: module, action: 'route', outbound: target },
-  );
+  // 配置级前置动作（不随 order 变化）：
+  //   sniff      → 从连接里识别域名/协议
+  //   hijack-dns → 把发往 53 端口的 DNS 拉进 sing-box 自己的 DNS
+  const rules = [{ action: 'sniff' }, { action: 'hijack-dns', protocol: 'dns' }];
+  let resolveInserted = false;
+  for (const { module, target } of order) {
+    const mod = modules[module];
+    // 域名类规则靠域名匹配即可；IP 类规则必须先把域名解析成真实 IP，
+    // 否则 fakeip 模式下目标地址是 198.18.x，geoip 规则永远不命中
+    if (!resolveInserted && mod.behavior === 'ipcidr') {
+      rules.push({ action: 'resolve', server: 'local-dns' });
+      resolveInserted = true;
+    }
+    rules.push(
+      target === 'reject'
+        ? { rule_set: module, action: 'reject' }
+        : { rule_set: module, action: 'route', outbound: target },
+    );
+  }
 
   const body = tpl
     .replace('{{RULE_SET}}', JSON.stringify(ruleSet))

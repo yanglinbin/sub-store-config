@@ -1,14 +1,4 @@
-- { module: category-ads-all, target: reject }
-- { module: private,          target: direct }
-- { module: geoip-private,    target: direct, no_resolve: true }
-- { module: f1tv,             target: f1tv }
-- { module: microsoft,        target: direct }
-- { module: apple,            target: direct }
-- { module: icloud,           target: direct }
-- { module: steam,            target: direct }
-- { module: applications,     target: direct }
-- { module: gfw,              target: proxies }
-- { module: geoip-cn,         target: direct, no_resolve: true }
-- { module: geoip-telegram,   target: proxies }
-- { module: direct,           target: direct }
-- { module: proxy,            target: proxies }
+- { module: geoip-private,  target: direct }
+- { module: f1tv,           target: f1tv }
+- { module: geoip-cn,       target: direct }
+- { module: geoip-telegram, target: proxies }

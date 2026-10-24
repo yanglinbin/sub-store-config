@@ -19,28 +19,33 @@ test('rule_set 按 order 顺序、url 指向 .srs、format=binary', () => {
     c.route.rule_set.map((r) => r.tag),
     loadAll().order.map((o) => o.module),
   );
-  // 域名类走 meta-rules-dat
-  assert.equal(
-    c.route.rule_set[0].url,
-    'https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-ads-all.srs',
-  );
-  assert.equal(c.route.rule_set[0].format, 'binary');
-  assert.equal(c.route.rule_set[0].update_interval, '1d');
+  assert.equal(c.route.rule_set.length, 4);
   // IP 类走 geoip 官方 srs
   const cn = c.route.rule_set.find((r) => r.tag === 'geoip-cn');
   assert.equal(cn.url, 'https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/srs/cn.srs');
   assert.equal(cn.format, 'binary');
-  // 自建走我们自己的 dist
-  const apps = c.route.rule_set.find((r) => r.tag === 'applications');
-  assert.equal(apps.url, `${BASE}/singbox/rules/applications.srs`);
+  assert.equal(cn.update_interval, '1d');
+  // 自建（目前只有 f1tv）
+  const f1 = c.route.rule_set.find((r) => r.tag === 'f1tv');
+  assert.equal(f1.url, `${BASE}/singbox/rules/f1tv.srs`);
 });
 
 test('route 规则与 order 一致（reject 用 action=reject）', () => {
   const c = render();
+  // 配置级前置动作：sniff + hijack-dns，否则 fakeip 下 IP 规则无从匹配
+  assert.deepEqual(c.route.rules[0], { action: 'sniff' });
+  assert.deepEqual(c.route.rules[1], { action: 'hijack-dns', protocol: 'dns' });
+  // 第一条 ipcidr 模块前必须自动插入 resolve，否则目标是 fakeip，geoip 规则永不命中
+  const idxResolve = c.route.rules.findIndex((r) => r.action === 'resolve');
+  const idxFirstIp = c.route.rules.findIndex(
+    (r) => r.rule_set && c.route.rule_set.find((s) => s.tag === r.rule_set)?.tag.startsWith('geoip-'),
+  );
+  assert.ok(idxResolve > 0 && idxResolve < idxFirstIp, 'resolve 必须在第一条 IP 规则之前');
+
   const routeRules = c.route.rules.filter((r) => r.rule_set);
-  assert.equal(routeRules.length, 14);
-  assert.deepEqual(routeRules[0], { rule_set: 'category-ads-all', action: 'reject' });
-  assert.deepEqual(routeRules[1], { rule_set: 'private', action: 'route', outbound: 'direct' });
+  assert.equal(routeRules.length, 4);
+  assert.deepEqual(routeRules[0], { rule_set: 'geoip-private', action: 'route', outbound: 'direct' });
+  assert.deepEqual(routeRules[1], { rule_set: 'f1tv', action: 'route', outbound: 'f1tv' });
   assert.ok(routeRules.some((r) => r.rule_set === 'geoip-cn' && r.outbound === 'direct'));
 });
 
