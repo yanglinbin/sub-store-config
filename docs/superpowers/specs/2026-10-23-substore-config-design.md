@@ -272,6 +272,11 @@ f1tv:
 
 结论：IP 类已全部迁到 `geoip` 仓库；域名类没有可迁移的去处（除非自己解 protobuf），故保留 `clash-rules`。
 
+> **2026-10-24 现状（重构中，以代码为准）**：用户要求只保留 `Loyalsoldier/geoip` 一个上游、
+> 自建规则集只留 `f1tv`。当前 `rules/modules.yaml` 只有 4 个模块：
+> `geoip-cn` / `geoip-private` / `geoip-telegram`（remote）+ `f1tv`（built）。
+> 下文 §6 描述的 14 模块布局是**规划目标**，尚未恢复；规则集规划确定后再按本文档补齐。
+
 ## 6. 分流规格
 
 ### 6.1 策略组（唯一真相：`templates/*.tpl` 由 `config/regions.yaml` 渲染）

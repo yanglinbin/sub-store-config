@@ -4,17 +4,17 @@
 
 - 节点：只来自你的机场订阅，Sub-Store 负责过滤/去重/排序
 - 规则：两端同源（`rules/order.yaml` + `rules/modules.yaml`）
-  - **IP 类**：直接引用 [Loyalsoldier/geoip](https://github.com/Loyalsoldier/geoip) 官方产物（sing-box `release/srs/*.srs`，mihomo `release/mrs/*.mrs`）
-  - **域名类**：直接引用 [MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat) 官方产物（sing-box `@sing/geo/geosite/*.srs`，mihomo `@meta/geo/geosite/*.mrs`）
-  - **只有 4 个模块由本仓库构建**：`f1tv` / `microsoft` / `steam` / `applications`（进程规则与自定义清单，写在 `rules/custom/*.yaml`）
-  - 不再引用 `Loyalsoldier/clash-rules`：域名改用 meta-rules-dat，进程清单已 vendored 进仓库
-- 分组：`proxies` / `direct` / `f1tv` / `final` + 按地区自动生成的节点组
-- 产物：CI 每日构建，推送到 `dist` 分支，Sub-Store 直接 raw 引用
+  - **当前处于重构中：只引用 `Loyalsoldier/geoip` 一个上游**（IP 类，直引官方 `srs` / `mrs`）
+  - **自建规则集只留 `f1tv`** 一个（其余自定义清单已删除，git 历史里可找回）
+  - 不引用 `clash-rules`、`meta-rules-dat` 或任何其他仓库
 
-设计文档：`docs/superpowers/specs/2026-10-23-substore-config-design.md`
-实施计划：`docs/superpowers/plans/2026-10-23-substore-config.md`
-
----
+> ⚠️ 重构中的行为提醒：现在只有 **4 条规则**（`geoip-private` / `f1tv` / `geoip-cn` / `geoip-telegram`），
+> 全是 IP 维度。也就是说：
+> - 广告域名**不会被拦截**（没有 reject 规则）
+> - 非中国域名**不会因为域名规则走代理**——只有 Telegram 的 IP 段会走 `proxies`
+> - 其余流量落到 `final`（默认 `DIRECT`），想临时全走代理就在客户端点 `proxies` 组
+>
+> 规则规划好之后，在 `modules.yaml` / `order.yaml` 加模块即可，模板与脚本不用动。
 
 ## 目录
 
@@ -60,145 +60,10 @@ npm run validate
 | 想做的事 | 改哪里 |
 |---|---|
 | 加一条自定义域名/进程规则 | `rules/custom/*.yaml`（`domain` / `domain_suffix` / `domain_keyword` / `domain_regex` / `ip_cidr` / `process_name`） |
-| 换某个模块的数据源 | `rules/modules.yaml` 的 `sources` |
-| 加一个 **IP 类**规则（推荐直引官方产物） | `rules/modules.yaml` 加 `{kind: remote, behavior: ipcidr, category: <cn/us/jp/netflix/google/…>}`，再在 `order.yaml` 加一行；本地不拉取、不编译 |
+| 加一个 IP 类规则 | `rules/modules.yaml` 加 `{kind: remote, upstream: geoip, behavior: ipcidr, category: <cn/hk/us/jp/netflix/google/…>}`，再在 `order.yaml` 加一行；本地不抓取不编译 |
 | 调整规则顺序或目标组 | `rules/order.yaml`（目标只允许 `reject` / `direct` / `proxies` / `f1tv`） |
 | 加国家/地区组 | `config/regions.yaml` 加一行（有节点才生成） |
 | 换客户端参数（端口/MTU/DNS） | `templates/mihomo.yaml.tpl` / `templates/singbox.json.tpl` |
 | 改分组逻辑（DIRECT 位置等） | `lib/grouping.mjs`（两份脚本由它生成） |
 
-改完 push 到 `main`，CI 会自动重建并更新 `dist` 分支。
 
----
-
-## Sub-Store 配置（4 步）
-
-> 前提：Node/Docker 版 Sub-Store，且已设置环境变量
-> `SUB_STORE_FRONTEND_BACKEND_PATH=/`（不想改路径就设 `/`），否则脚本无法执行。
-
-### 1. 订阅（节点池）
-
-新建「单条订阅」，名称 **`kitty`**（脚本按名称引用，改名要同步改脚本参数）：
-
-| 配置项 | 值 |
-|---|---|
-| 远程订阅 | 你的机场订阅地址 |
-| User-Agent | `clash.meta/v1.19.99`（按机场要求调整，优先 mihomo 订阅） |
-| 超时 | `10000` |
-
-「节点操作」加 **三个自带算子**（推荐，零脚本维护）：
-
-| 顺序 | 算子 | 参数 |
-|---|---|---|
-| 1 | **正则筛选 Regex Filter** | `keep` 关闭（= 丢弃命中项），正则：`网址\|剩余\|流量\|重置\|套餐\|如遇\|永久\|官方\|群组\|欢迎\|官网\|频道\|个人\|到期\|续费\|免费` |
-| 2 | **节点去重 Handle Duplicate** | 动作 `delete`，去重字段 `name`、`server`、`port` |
-| 3 | **节点排序 Sort** | `asc` |
-
-> 注意：正则筛选默认 `keep: true`（只保留命中），留空正则会**把所有节点筛掉**。要"丢弃"必须把 keep 关掉。
-> 早期版本用的是 `scripts/nodes.js`（同样三件事，正则取自 `config/node-filter.yaml`）；脚本仍会生成，
-> 想用脚本就把上面三步换成一个脚本操作即可，两种方式效果等价。
-
-### 2. 文件 `clash`（mihomo 用）
-
-「文件」→ 新建：
-
-| 配置项 | 值 |
-|---|---|
-| 类型 | `mihomoConfig`（mihomo 配置文件） |
-| 来源 | 远程 |
-| URL | `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/mihomo/config.yaml` |
-
-「处理操作」按序添加：
-
-1. **从订阅添加节点（Add Proxies）**：订阅 `kitty`，位置 `replace`
-2. **脚本操作**：远程脚本 `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/scripts/mihomo.js#name=kitty`
-
-保存后得到链接 `/api/file/clash`，直接导入 Mihomo Party / Clash Verge Rev 等。
-
-### 3. 文件 `singbox`（sing-box 用）
-
-| 配置项 | 值 |
-|---|---|
-| 类型 | 普通文件（file） |
-| 来源 | 远程 |
-| URL | `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/singbox/template.json` |
-
-「处理操作」：**脚本操作** → 远程脚本 `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist/scripts/singbox.js#name=kitty`
-
-保存后链接 `/api/file/singbox`。sing-box 内核本身没有订阅概念，用它的 GUI 或手动保存成
-`config.json` 再 `sing-box run -c`。
-
-### 4.（可选）同步到私有 Gist
-
-脚本本身不发网络请求，正常不会超时；若客户端拉取仍超时，把上面两个文件各建一个「同步」任务，
-定时推到私有 Gist，客户端改用 Gist 链接。
-
----
-
-## 更换 / 新增订阅（机场）
-
-三个地方引用订阅名，**必须指向同一个**，否则 mihomo 与 sing-box 会拿到不同的节点集合：
-
-| 位置 | 字段 | 说明 |
-|---|---|---|
-| 文件 `clash` 的「从订阅添加节点」 | `sourceName` / `sourceType` | 决定 mihomo 拿谁的节点 |
-| 文件 `clash` 的脚本操作 | `#name=<名字>` | 只在脚本里做展示/调试用，实际节点来自上一步 |
-| 文件 `singbox` 的脚本操作 | `#name=<名字>&type=sub|col` | 决定 sing-box 拿谁的节点 |
-
-### 方案 A：原地换源（最省事，推荐）
-
-订阅名不变，只换 URL：订阅编辑页把远程订阅地址改成新的即可。
-下游三个引用全部照旧，不用动。
-
-### 方案 B：新建订阅，改指针
-
-1. 新建订阅 `kitty2`
-2. 文件 `clash` →「从订阅添加节点」：`sourceName` 改成 `kitty2`
-3. 文件 `clash` 脚本：`…/scripts/mihomo.js#name=kitty2&noCache=true`
-4. 文件 `singbox` 脚本：`…/scripts/singbox.js#name=kitty2&noCache=true`
-
-### 方案 C：组合订阅（长期多机场）
-
-1. 新建组合订阅 `air`，把 `kitty`、`kitty2`… 加进去
-2. 文件 `clash` →「从订阅添加节点」：来源类型选 `collection`（组合订阅），名字填 `air`
-3. 文件 `clash` 脚本：`#name=air&noCache=true`
-4. 文件 `singbox` 脚本：`#name=air&type=col&noCache=true`（`type=col` 告诉脚本按组合订阅取）
-5. 以后增删机场只改 `air`，两个文件都不用动
-
-> 换机场后如果节点命名风格变了（比如没有旗帜、国家写成别的语言），地区组会变少或归错类——
-> 在 `config/regions.yaml` 里补关键词即可，push 后自动生效。
-
-## 分流行为
-
-规则顺序（`rules/order.yaml`）先窄后宽：
-
-```
-category-ads-all → private → lancidr → f1tv → microsoft → apple → icloud → steam
-→ applications → gfw → cncidr → telegramcidr → direct → proxy → (未命中) final
-```
-
-策略组：
-
-| 组（按显示顺序） | 成员顺序 | 默认 |
-|---|---|---|
-| `proxies` | 地区组 → 全部节点 → `DIRECT` | 第一个地区组 |
-| `f1tv` | `美国` → 其他地区组 → `proxies` → `DIRECT` | `美国` |
-| `direct` | `DIRECT` → 地区组 → `proxies` | `DIRECT` |
-| `final` | `DIRECT` → 地区组 → `proxies` | `DIRECT` |
-| 地区组（有节点才生成，排在最后） | 该地区节点（urltest） | — |
-
-`DIRECT` 位置规则：只有默认就是直连的 `direct` / `final` 把它放首位，其余放末位。
-
-## 关闭 IPv6（默认开启）
-
-- mihomo：`templates/mihomo.yaml.tpl` 里 `ipv6: true` → `false`
-- sing-box：`templates/singbox.json.tpl` 的 `dns.rules` 最前面加一条
-  `{ "query_type": ["AAAA"], "action": "reject" }`，并把 `dns.strategy` 改成 `ipv4_only`、
-  删掉 tun 的 `fdfe:...` 地址、删掉 fakeip 的 `inet6_range`
-
-## 已知限制
-
-- sing-box 侧规则集在构建时用 `sing-box rule-set compile` 编成 `.srs`（合计约 3MB；
-  同时保留 `.json` 便于 diff，模板只引用 `.srs`）。本机没有 sing-box 时自动退化为 source JSON
-- `PROCESS-NAME` / `process_name` 规则只在 Linux / Windows / macOS 生效，移动端会失效
-- 本机未安装 mihomo 时，CI/本地无法跑 `mihomo -t`，只做 YAML 结构校验
