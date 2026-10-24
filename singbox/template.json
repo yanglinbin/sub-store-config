@@ -1,0 +1,307 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "http_clients": [
+    {
+      "tag": "direct-download"
+    }
+  ],
+  "dns": {
+    "servers": [
+      {
+        "type": "https",
+        "tag": "local-dns",
+        "server": "223.5.5.5",
+        "path": "/dns-query"
+      },
+      {
+        "type": "https",
+        "tag": "remote-dns",
+        "server": "1.1.1.1",
+        "path": "/dns-query",
+        "detour": "proxies"
+      },
+      {
+        "type": "fakeip",
+        "tag": "fakeip",
+        "inet4_range": "198.18.0.0/15",
+        "inet6_range": "fc00::/18"
+      }
+    ],
+    "rules": [
+      {
+        "domain_suffix": [
+          ".lan",
+          ".local",
+          ".direct",
+          ".localhost"
+        ],
+        "server": "local-dns"
+      },
+      {
+        "domain_keyword": [
+          "time",
+          "ntp"
+        ],
+        "server": "local-dns"
+      },
+      {
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "server": "fakeip"
+      }
+    ],
+    "final": "remote-dns",
+    "strategy": "prefer_ipv4"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "address": [
+        "172.19.0.1/30",
+        "fdfe:dcba:9876::1/126"
+      ],
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "mixed",
+      "mtu": 1400
+    },
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "127.0.0.1",
+      "listen_port": 7890
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "selector",
+      "tag": "proxies",
+      "outbounds": [
+        "DIRECT"
+      ],
+      "default": "DIRECT",
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "selector",
+      "tag": "f1tv",
+      "outbounds": [
+        "DIRECT"
+      ],
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "selector",
+      "tag": "direct",
+      "outbounds": [
+        "DIRECT"
+      ],
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "selector",
+      "tag": "final",
+      "outbounds": [
+        "DIRECT"
+      ],
+      "default": "DIRECT",
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "direct",
+      "tag": "DIRECT"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "default_http_client": "direct-download",
+    "default_domain_resolver": "local-dns",
+    "final": "final",
+    "rule_set": [
+      {
+        "type": "remote",
+        "tag": "category-ads-all",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/category-ads-all.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "private",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/private.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "lancidr",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/lancidr.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "f1tv",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/f1tv.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "microsoft",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/microsoft.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "apple",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/apple.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "icloud",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/icloud.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "steam",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/steam.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "applications",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/applications.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "gfw",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/gfw.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "cncidr",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/cncidr.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "telegramcidr",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/telegramcidr.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "direct",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/direct.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "proxy",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist/singbox/rules/proxy.srs",
+        "update_interval": "1d"
+      }
+    ],
+    "rules": [
+      {
+        "rule_set": "category-ads-all",
+        "action": "reject"
+      },
+      {
+        "rule_set": "private",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "lancidr",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "f1tv",
+        "action": "route",
+        "outbound": "f1tv"
+      },
+      {
+        "rule_set": "microsoft",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "apple",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "icloud",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "steam",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "applications",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "gfw",
+        "action": "route",
+        "outbound": "proxies"
+      },
+      {
+        "rule_set": "cncidr",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "telegramcidr",
+        "action": "route",
+        "outbound": "proxies"
+      },
+      {
+        "rule_set": "direct",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "proxy",
+        "action": "route",
+        "outbound": "proxies"
+      }
+    ]
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "store_fakeip": true
+    },
+    "clash_api": {
+      "external_controller": "127.0.0.1:9090"
+    }
+  }
+}
