@@ -12,7 +12,7 @@
 
 ---
 
-## 规则集（14 个模块）
+## 规则集（15 个模块）
 
 | # | 模块 | 来源 | 类型 | → 组 |
 |---|---|---|---|---|
@@ -25,28 +25,42 @@
 | 7 | `icloud` | clash-rules `icloud.txt` | domain | direct |
 | 8 | `steam` | 自建（4 域名 + 40 CIDR） | classical | direct |
 | 9 | `applications` | clash-rules（98 条进程） | classical | direct |
-| 10 | `gfw` | clash-rules `gfw.txt` | domain | **proxies** |
-| 11 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
-| 12 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
-| 13 | `direct` | clash-rules `direct.txt` | domain | direct |
-| 14 | `proxy` | clash-rules `proxy.txt` | domain | **proxies** |
+| 10 | `google` | clash-rules **`google.txt`**（112 条，大陆可连的 Google 域名） | domain | **proxies** |
+| 11 | `gfw` | clash-rules `gfw.txt` | domain | **proxies** |
+| 12 | `direct` | clash-rules `direct.txt` | domain | direct |
+| 13 | `proxy` | clash-rules `proxy.txt` | domain | **proxies** |
+| 14 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
+| 15 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
+| 16 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
 
 未命中 → `final` 组。**两端都有兜底**：mihomo 末尾追加 `MATCH,final`，sing-box 用 `route.final: "final"`。
 
-**Google 的走向**：`gfw` 列表里已含 251 条 Google/YouTube 域名（含 `google.cn`、`google.com`、`youtube.com`），
-它在 `cncidr` 之前，所以 Google 流量走 `proxies`。**例外**：`googleapis.cn`、`gstatic.cn`、
-`xn--ngstr-lra8j.com` 上游任何列表里都没有，会经 `cncidr` 判成直连——
-想找回就在 `rules/custom/` 加一个 3 行的清单并挂回 `modules.yaml` / `order.yaml`。
+**Google 的走向**：`google` 模块直接引用上游 `google.txt`（112 条，官方维护的"Google 在大陆可直连域名"，
+含 `2mdn-cn.net`、`admob-cn.com`、`redirector.xn--ngstr-lra8j.com` 等）→ `proxies`；
+`gfw` 里另有 251 条 Google/YouTube 域名做补充。两者都排在所有 IP 规则之前。
+唯一剩下的例外是 `gstatic.cn`（上游哪张表都没有，会被 `cncidr` 判成直连）。
 
-sing-box 侧另有三个固定前置动作（不随 `order.yaml` 变化）：
+**为什么 IP 规则排在所有域名规则之后**：sing-box 的 `{action: resolve}` 会强制解析目标域名
+（fakeip 模式下必须解析才能匹配 `ipcidr`）。把它放在域名规则之后，只有"哪张域名表都没进"的连接才付这次解析，
+同时避免把要代理的域名先送去本地 DNS 污染一遍——被污染的 IP 也就不会让 `cncidr` 把代理域名抢成直连。
+
+sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 
 ```json
-{"action":"sniff"},                              // 识别域名/协议
-{"action":"hijack-dns","protocol":"dns"},        // 53 端口的 DNS 拉进 sing-box
-{"action":"resolve","server":"local-dns"},       // 自动插在第一条 ipcidr 模块前
+{"action":"sniff"},                        // 识别域名/协议
+{"action":"hijack-dns","protocol":"dns"},  // 53 端口的 DNS 拉进 sing-box
+...15 条规则...                             // 第 9/10/11/12/13 条之后自动插入 ↓
+{"action":"resolve","server":"local-dns"}, // 只对没命中域名规则的连接生效
+...lancidr / cncidr / telegramcidr...
 ```
 
-没有 `resolve` 时，fakeip 目标是 `198.18.x`，`cncidr` / `lancidr` / `telegramcidr` 永远不会命中。
+### 三个常见"优化"建议的实测结论
+
+| 建议 | 结论 | 依据 |
+|---|---|---|
+| `default_domain_resolver` 改 `remote-dns` | **驳回** | `remote-dns` 是 `detour: proxies` 的 DoH。拿它解析**代理服务器自己的域名**会形成 bootstrap 死锁（解析要代理、代理要解析）。mihomo 为此专门有 `proxy-server-nameserver`。本配置的 39 个节点域名必须用本地/直连解析器 |
+| `resolve` 全局改成只作用于 `rule_set: [cncidr, telegramcidr]` | **采纳意图，改用更正确的做法** | 给 `resolve` 加 `rule_set` 是无效的：`ip_cidr` 规则集在"还不知道目标 IP"时无法匹配，会永不触发。正确做法是把 **所有域名规则前置**，`resolve` 自然只对剩余连接生效（已在 `order.yaml` 落地） |
+| `strict_route: true` 在 Windows 会挡局域网 | **证据不足，保留 true** | 1.14 文档里 Windows 下 `strict_route` 只声明三件事：不支持的网络不可达、阻止多网卡 DNS 泄露、非 TUN 接口的 53 端口被封；**没有**"挡局域网"的描述。如果你实测访问 NAS/打印机异常，把模板里 `strict_route` 改 `false` 即可 |
 
 ## 策略组
 

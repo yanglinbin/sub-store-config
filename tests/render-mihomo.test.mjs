@@ -18,7 +18,7 @@ test('全局字段与 spec 一致', () => {
 
 test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格式', () => {
   const c = render();
-  assert.equal(Object.keys(c['rule-providers']).length, 14);
+  assert.equal(Object.keys(c['rule-providers']).length, 15);
 
   assert.deepEqual(c['rule-providers']['category-ads-all'], {
     type: 'http',
@@ -32,6 +32,7 @@ test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格�
   assert.equal(c['rule-providers'].cncidr.format, 'text');
   assert.equal(c['rule-providers'].f1tv.behavior, 'classical');
   assert.equal(c['rule-providers'].gfw.url, `${BASE}/mihomo/rules/gfw.list`);
+  assert.equal(c['rule-providers'].google.url, `${BASE}/mihomo/rules/google.list`);
 });
 
 test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
@@ -39,18 +40,19 @@ test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
   assert.deepEqual(c.rules, [
     'RULE-SET,category-ads-all,REJECT',
     'RULE-SET,private,direct',
-    'RULE-SET,lancidr,direct',
     'RULE-SET,f1tv,f1tv',
     'RULE-SET,microsoft,direct',
     'RULE-SET,apple,direct',
     'RULE-SET,icloud,direct',
     'RULE-SET,steam,direct',
     'RULE-SET,applications,direct',
+    'RULE-SET,google,proxies',
     'RULE-SET,gfw,proxies',
-    'RULE-SET,cncidr,direct',
-    'RULE-SET,telegramcidr,proxies',
     'RULE-SET,direct,direct',
     'RULE-SET,proxy,proxies',
+    'RULE-SET,lancidr,direct',
+    'RULE-SET,cncidr,direct',
+    'RULE-SET,telegramcidr,proxies',
     'MATCH,final',
   ]);
 });

@@ -19,6 +19,9 @@ apple:
 icloud:
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt"]
+google:             # 上游「Google 在中国大陆可直连的域名」清单（112 条）→ 一律走代理
+  behavior: domain
+  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/google.txt"]
 gfw:                # 含 google.cn / google.com / youtube.com 等 251 条 Google 相关
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt"]

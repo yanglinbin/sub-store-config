@@ -19,7 +19,7 @@ test('rule_set 按 order 顺序、url 指向 .srs、format=binary', () => {
     c.route.rule_set.map((r) => r.tag),
     loadAll().order.map((o) => o.module),
   );
-  assert.equal(c.route.rule_set.length, 14);
+  assert.equal(c.route.rule_set.length, 15);
   assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/category-ads-all.srs`);
   assert.equal(c.route.rule_set[0].format, 'binary');
   assert.equal(c.route.rule_set[0].update_interval, '1d');
@@ -33,10 +33,14 @@ test('route 规则与 order 一致（reject 用 action=reject）', () => {
   // 第一条 ipcidr 模块前必须自动插入 resolve，否则目标是 fakeip，geoip 规则永不命中
   const idxResolve = c.route.rules.findIndex((r) => r.action === 'resolve');
   const idxFirstIp = c.route.rules.findIndex((r) => r.rule_set === 'lancidr');
-  assert.ok(idxResolve > 0 && idxResolve < idxFirstIp, 'resolve 必须在第一条 IP 规则之前');
+  // 所有域名类规则必须都在 resolve 之前（否则每条连接都要强制解析）
+  for (const tag of ['google', 'gfw', 'direct', 'proxy']) {
+    assert.ok(c.route.rules.findIndex((r) => r.rule_set === tag) < idxResolve, tag + ' 应在 resolve 之前');
+  }
+
 
   const routeRules = c.route.rules.filter((r) => r.rule_set);
-  assert.equal(routeRules.length, 14);
+  assert.equal(routeRules.length, 15);
   assert.deepEqual(routeRules[0], { rule_set: 'category-ads-all', action: 'reject' });
   assert.deepEqual(routeRules[1], { rule_set: 'private', action: 'route', outbound: 'direct' });
   assert.deepEqual(
