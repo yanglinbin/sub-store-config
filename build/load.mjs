@@ -4,6 +4,8 @@ import { parse } from 'yaml';
 
 const BEHAVIORS = new Set(['domain', 'ipcidr', 'classical']);
 const KINDS = new Set(['built', 'remote']);
+const UPSTREAMS = new Set(['geoip', 'meta']);
+const LAYERS = new Set(['geosite', 'geoip']);
 const TARGETS = new Set(['reject', 'direct', 'proxies', 'f1tv']);
 
 function readYaml(path) {
@@ -49,13 +51,23 @@ export function loadModules(path) {
     const kind = def.kind ?? 'built';
     if (!KINDS.has(kind)) throw new Error(`module "${name}" 的 kind 非法: ${def.kind}（只允许 built/remote）`);
     if (kind === 'remote') {
+      if (!UPSTREAMS.has(def.upstream)) {
+        throw new Error(`module "${name}" 的 upstream 非法: ${def.upstream}（只允许 geoip/meta）`);
+      }
       if (typeof def.category !== 'string' || def.category === '') {
-        throw new Error(`module "${name}" 是 remote，必须给 category（geoip 文件名）`);
+        throw new Error(`module "${name}" 是 remote，必须给 category（上游文件名）`);
       }
       if (!BEHAVIORS.has(def.behavior)) {
         throw new Error(`module "${name}" 的 behavior 非法: ${def.behavior}`);
       }
-      modules[name] = { kind, behavior: def.behavior, category: def.category };
+      const entry = { kind, upstream: def.upstream, behavior: def.behavior, category: def.category };
+      if (def.upstream === 'meta') {
+        if (!LAYERS.has(def.layer)) {
+          throw new Error(`module "${name}" 的 layer 非法: ${def.layer}（meta 上游需 geosite/geoip）`);
+        }
+        entry.layer = def.layer;
+      }
+      modules[name] = entry;
       continue;
     }
     if (!BEHAVIORS.has(def.behavior)) {

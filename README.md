@@ -4,8 +4,10 @@
 
 - 节点：只来自你的机场订阅，Sub-Store 负责过滤/去重/排序
 - 规则：两端同源（`rules/order.yaml` + `rules/modules.yaml`）
-  - **IP 类直接引用 [Loyalsoldier/geoip](https://github.com/Loyalsoldier/geoip) 官方产物**（sing-box 用 `release/srs/*.srs`，mihomo 用 `release/mrs/*.mrs`），本地不拉取不编译
-  - 域名 / 进程类由本仓库从 `Loyalsoldier/clash-rules` 构建（geoip 仓库只有 IP，没有域名列表）
+  - **IP 类**：直接引用 [Loyalsoldier/geoip](https://github.com/Loyalsoldier/geoip) 官方产物（sing-box `release/srs/*.srs`，mihomo `release/mrs/*.mrs`）
+  - **域名类**：直接引用 [MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat) 官方产物（sing-box `@sing/geo/geosite/*.srs`，mihomo `@meta/geo/geosite/*.mrs`）
+  - **只有 4 个模块由本仓库构建**：`f1tv` / `microsoft` / `steam` / `applications`（进程规则与自定义清单，写在 `rules/custom/*.yaml`）
+  - 不再引用 `Loyalsoldier/clash-rules`：域名改用 meta-rules-dat，进程清单已 vendored 进仓库
 - 分组：`proxies` / `direct` / `f1tv` / `final` + 按地区自动生成的节点组
 - 产物：CI 每日构建，推送到 `dist` 分支，Sub-Store 直接 raw 引用
 

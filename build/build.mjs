@@ -44,10 +44,10 @@ console.log('[3/5] 两端模板已渲染');
 const scripts = await emitScripts({ outDir: join(DIST, 'scripts') });
 console.log(`[4/5] 脚本 ${scripts.length} 个`);
 
-const entryCount = countEntries(DIST);
+const remoteModules = Object.values(modules).filter((m) => m.kind === 'remote').length;
 writeFileSync(
   join(DIST, 'build-info.json'),
-  JSON.stringify({ builtAt: new Date().toISOString(), baseUrl: BASE_URL, counts: { modules: order.length, entries: entryCount, files: rulesetFiles.length } }, null, 2) + '\n',
+  JSON.stringify({ builtAt: new Date().toISOString(), baseUrl: BASE_URL, counts: { modules: order.length, remoteModules, builtModules: order.length - remoteModules, builtEntries: countEntries(DIST), files: rulesetFiles.length } }, null, 2) + '\n',
 );
 
 const result = await validateDist({ distDir: DIST, baseUrl: BASE_URL });

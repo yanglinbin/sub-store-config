@@ -26,8 +26,9 @@ v1 → v2 的变化：规则从"引用上游 srs"改为"**自建规则库**（�
 **目标**
 
 1. 自建**模块化规则库**：单一真相源（模块定义 + 规则顺序 + 自定义条目），一次构建同时产出
-   mihomo 与 sing-box 两种格式；数据取自 Loyalsoldier 生态（`clash-rules` 文本 + `geoip` 的
-   `text/*.txt`），`v2ray-rules-dat` 作为数据同源参照。
+   mihomo 与 sing-box 两种格式；IP 类直引 `Loyalsoldier/geoip` 官方产物，域名类直引
+   `MetaCubeX/meta-rules-dat` 官方产物，只有 4 个自定义模块（f1tv/microsoft/steam/applications）
+   由本仓库构建。**不引用 `Loyalsoldier/clash-rules`。**
 2. 自定义规则是**一等公民**：新增一条规则 = 在 `rules/custom/*.yaml` 加一行，CI 自动合并进产物。
 3. 策略组只有四类：`proxies`（代理）、`direct`（直连）、`f1tv`（独立选择）、`final`（未命中，
    默认直连、可手选代理），外加**按国家/地区自动生成的节点组**。
@@ -265,7 +266,8 @@ f1tv:
 | 类型 | 来源 | 说明 |
 |---|---|---|
 | IP 类（`geoip-cn` / `geoip-private` / `geoip-telegram`） | **`Loyalsoldier/geoip@release/srs/*.srs`（sing-box）+ `release/mrs/*.mrs`（mihomo）** | 该仓库的原料输出（`cn.txt` / `private.txt` / `telegram.txt`，均实测 200）；还提供各国 `text/<cc>.txt`，将来要加"某国 IP 直连"直接换 URL |
-| 域名类（`category-ads-all` / `gfw` / `private` / `apple` / `icloud` / `direct` / `proxy` / `applications`） | `Loyalsoldier/clash-rules@release/*.txt` | **`geoip` 仓库不发布域名列表**（`text/reject.txt`、`clash/`、`geosite/` 全部 404），只能留在 clash-rules |
+| 域名类（`category-ads-all` / `gfw` / `private` / `apple` / `icloud` / `direct`=`cn` / `proxy`=`geolocation-!cn`） | `MetaCubeX/meta-rules-dat`（`@sing/geo/geosite/*.srs`、`@meta/geo/geosite/*.mrs`） | geoip 仓库只有 IP；clash-rules 已按用户要求移除引用 |
+| 自建（`f1tv` / `microsoft` / `steam` / `applications`） | 仓库内 `rules/custom/*.yaml` | 进程规则与旧项目自定义清单，vendored |
 | `v2ray-rules-dat` | 不直接引用 | 只有 `geosite.dat`(11.4MB) / `geoip.dat`(16.6MB) protobuf；它是上述两个仓库的上游数据 |
 
 结论：IP 类已全部迁到 `geoip` 仓库；域名类没有可迁移的去处（除非自己解 protobuf），故保留 `clash-rules`。

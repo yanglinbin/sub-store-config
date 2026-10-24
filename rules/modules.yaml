@@ -1,54 +1,83 @@
 # 模块定义
-#   kind: remote  → IP 类，直接引用 Loyalsoldier/geoip 官方产物（srs / mrs），本地不抓取、不编译
-#   kind: built   → 省略即默认：域名/进程类，由本仓库从上游文本 + 自定义条目构建
+#   kind: remote  → 直接引用官方预编译产物，本地不抓取、不编译
+#       upstream: geoip → Loyalsoldier/geoip（release/srs|mrs，IP 类）
+#       upstream: meta  → MetaCubeX/meta-rules-dat（@sing|@meta 的 geosite|geoip，域名/IP 类）
+#   kind: built   → 省略即默认：由本仓库从 rules/custom/*.yaml 构建（不再依赖任何空格 txt 上游）
 #   behavior      → domain | ipcidr | classical（决定 mihomo rule-provider 的类型）
-#   category      → kind=remote 时必填，对应 geoip release 下的文件名（cn / private / telegram / …）
+#   layer         → geosite | geoip（仅 kind=remote 且 upstream=meta 时需要）
+#   category      → kind=remote 时必填，对应上游文件名
 
-# ============ IP 类（geoip 官方产物） ============
+# ============ IP 类（Loyalsoldier/geoip） ============
 geoip-cn:
   kind: remote
+  upstream: geoip
   behavior: ipcidr
   category: cn
 geoip-private:
   kind: remote
+  upstream: geoip
   behavior: ipcidr
   category: private
 geoip-telegram:
   kind: remote
+  upstream: geoip
   behavior: ipcidr
   category: telegram
 
-# ============ 域名 / 进程类（自建产物） ============
-category-ads-all:   # 即 Loyalsoldier 的 reject.txt（geosite:category-ads-all 的 clash 形态），纯上游，无 custom
+# ============ 域名类（MetaCubeX/meta-rules-dat geosite） ============
+category-ads-all:
+  kind: remote
+  upstream: meta
+  layer: geosite
   behavior: domain
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"]
+  category: category-ads-all
+private:
+  kind: remote
+  upstream: meta
+  layer: geosite
+  behavior: domain
+  category: private
+apple:
+  kind: remote
+  upstream: meta
+  layer: geosite
+  behavior: domain
+  category: apple
+icloud:
+  kind: remote
+  upstream: meta
+  layer: geosite
+  behavior: domain
+  category: icloud
 gfw:
+  kind: remote
+  upstream: meta
+  layer: geosite
   behavior: domain
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt"]
-private:            # 域名类内网（router.asus.com 之类），geoip 仓库没有域名列表
+  category: gfw
+direct:
+  kind: remote
+  upstream: meta
+  layer: geosite
   behavior: domain
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"]
+  category: cn
+proxy:
+  kind: remote
+  upstream: meta
+  layer: geosite
+  behavior: domain
+  category: geolocation-!cn
+
+# ============ 自建（仓库内自定义，无上游依赖） ============
 f1tv:
   behavior: classical
   custom: rules/custom/f1tv.yaml
 microsoft:
   behavior: classical
   custom: rules/custom/microsoft.yaml
-apple:
-  behavior: domain
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt"]
-icloud:
-  behavior: domain
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt"]
 steam:
   behavior: classical
   custom: rules/custom/steam.yaml
 applications:
   behavior: classical
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt"]
-direct:
-  behavior: domain
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"]
-proxy:
-  behavior: domain
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"]
+  custom: rules/custom/applications.yaml

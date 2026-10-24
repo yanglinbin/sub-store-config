@@ -19,13 +19,20 @@ test('rule_set 按 order 顺序、url 指向 .srs、format=binary', () => {
     c.route.rule_set.map((r) => r.tag),
     loadAll().order.map((o) => o.module),
   );
-  assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/category-ads-all.srs`);
+  // 域名类走 meta-rules-dat
+  assert.equal(
+    c.route.rule_set[0].url,
+    'https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-ads-all.srs',
+  );
   assert.equal(c.route.rule_set[0].format, 'binary');
   assert.equal(c.route.rule_set[0].update_interval, '1d');
   // IP 类走 geoip 官方 srs
   const cn = c.route.rule_set.find((r) => r.tag === 'geoip-cn');
   assert.equal(cn.url, 'https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/srs/cn.srs');
   assert.equal(cn.format, 'binary');
+  // 自建走我们自己的 dist
+  const apps = c.route.rule_set.find((r) => r.tag === 'applications');
+  assert.equal(apps.url, `${BASE}/singbox/rules/applications.srs`);
 });
 
 test('route 规则与 order 一致（reject 用 action=reject）', () => {

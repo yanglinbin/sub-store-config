@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse, stringify } from 'yaml';
-import { geoipMrs } from './upstream.mjs';
+import { geoipMrs, metaMrs } from './upstream.mjs';
 
 const TPL = 'templates/mihomo.yaml.tpl';
 
@@ -15,13 +15,14 @@ export function renderMihomo({ regions, order, modules, baseUrl, rootDir = proce
   for (const { module } of order) {
     const mod = modules[module];
     if (mod.kind === 'remote') {
-      // 按 geoip README 的 mihomo 写法：behavior=ipcidr + format=mrs
+      // 官方预编译产物：mihomo 用 .mrs（geoip 与 meta 两个上游都是这个格式）
+      const url = mod.upstream === 'meta' ? metaMrs(mod.layer, mod.category) : geoipMrs(mod.category);
       ruleProviders[module] = {
         type: 'http',
         behavior: mod.behavior,
         format: 'mrs',
-        url: geoipMrs(mod.category),
-        path: `./mrs/geoip/${mod.category}.mrs`,
+        url,
+        path: `./mrs/${mod.upstream === 'meta' ? mod.layer : 'geoip'}/${mod.category}.mrs`,
         interval: 86400,
       };
       continue;

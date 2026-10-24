@@ -16,12 +16,25 @@ test('全局字段与 spec 一致', () => {
   assert.deepEqual(c.profile, { 'store-selected': true, 'store-fake-ip': false });
 });
 
-test('rule-providers 覆盖全部模块且 url 指向 dist', () => {
+test('rule-providers：远程模块指向官方产物，自建模块指向 dist', () => {
   const c = render();
   assert.equal(Object.keys(c['rule-providers']).length, 14);
-  assert.equal(c['rule-providers']['category-ads-all'].url, `${BASE}/mihomo/rules/category-ads-all.list`);
-  assert.equal(c['rule-providers']['category-ads-all'].behavior, 'domain');
-  // IP 类模块直接引用 geoip 官方产物（mrs），不再由我们编译
+
+  // meta-rules-dat（域名类）
+  assert.deepEqual(c['rule-providers']['category-ads-all'], {
+    type: 'http',
+    behavior: 'domain',
+    format: 'mrs',
+    url: 'https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-ads-all.mrs',
+    path: './mrs/geosite/category-ads-all.mrs',
+    interval: 86400,
+  });
+  assert.equal(
+    c['rule-providers'].proxy.url,
+    'https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/geolocation-!cn.mrs',
+  );
+
+  // Loyalsoldier/geoip（IP 类）
   assert.deepEqual(c['rule-providers']['geoip-cn'], {
     type: 'http',
     behavior: 'ipcidr',
@@ -30,11 +43,10 @@ test('rule-providers 覆盖全部模块且 url 指向 dist', () => {
     path: './mrs/geoip/cn.mrs',
     interval: 86400,
   });
-  assert.equal(c['rule-providers']['geoip-telegram'].url, 'https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/mrs/telegram.mrs');
-  // 自建模块仍是我们自己的产物
-  assert.equal(c['rule-providers']['category-ads-all'].url, `${BASE}/mihomo/rules/category-ads-all.list`);
-  assert.equal(c['rule-providers']['category-ads-all'].format, 'yaml');
-  assert.equal(c['rule-providers'].f1tv.behavior, 'classical');
+
+  // 自建（仓库内自定义）
+  assert.equal(c['rule-providers'].f1tv.url, `${BASE}/mihomo/rules/f1tv.list`);
+  assert.equal(c['rule-providers'].f1tv.format, 'yaml');
 });
 
 test('rules 顺序 = order.yaml 顺序，target 映射正确，no-resolve 生效', () => {

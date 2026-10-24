@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { geoipSrs } from './upstream.mjs';
+import { geoipSrs, metaSrs } from './upstream.mjs';
 
 const TPL = 'templates/singbox.json.tpl';
 
@@ -12,12 +12,12 @@ export function renderSingbox({ regions, order, modules, baseUrl, rootDir = proc
   const ruleSet = order.map(({ module }) => {
     const mod = modules[module];
     if (mod.kind === 'remote') {
-      // 按 geoip README 的 sing-box 写法：直接引 release/srs/<category>.srs
+      // 官方预编译产物：sing-box 用 .srs
       return {
         type: 'remote',
         tag: module,
         format: 'binary',
-        url: geoipSrs(mod.category),
+        url: mod.upstream === 'meta' ? metaSrs(mod.layer, mod.category) : geoipSrs(mod.category),
         update_interval: '1d',
       };
     }

@@ -39,12 +39,28 @@ export function probeSingbox({ configPath = 'dist/singbox/template.json', durati
   });
 }
 
+const NETWORK_ERROR = /wsarecv|forcibly closed|connection reset|ECONNRESET|ETIMEDOUT|i\/o timeout|no such host|TLS handshake|unexpected EOF/i;
+
+/** 只有"网络抖动"才重试；配置类错误（decode/detour/unsupported/unknown…）一次就判死 */
+function classify(problems) {
+  const text = problems.join('\n');
+  if (/detour to an empty|unsupported|unknown|decode config|invalid|duplicate/i.test(text)) return 'config';
+  if (NETWORK_ERROR.test(text)) return 'network';
+  return 'config';
+}
+
 if (process.argv[1] && process.argv[1].endsWith('probe.mjs')) {
   let failed = false;
 
-  const sb = await probeSingbox();
+  let sb = await probeSingbox();
+  if (!sb.ok && classify(sb.problems) === 'network') {
+    console.log('… sing-box 冒烟因网络抖动失败，重试一次');
+    sb = await probeSingbox();
+  }
   if (sb.ok) console.log('✔ sing-box 运行时冒烟通过（rule-set 已初始化，无 FATAL）');
-  else {
+  else if (classify(sb.problems) === 'network') {
+    console.log('… sing-box 冒烟两次都被网络中断，跳过（不是配置问题）');
+  } else {
     failed = true;
     for (const p of sb.problems) console.error('✖ sing-box:', p);
   }
