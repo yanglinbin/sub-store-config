@@ -21,7 +21,19 @@ test('rule-providers 覆盖全部模块且 url 指向 dist', () => {
   assert.equal(Object.keys(c['rule-providers']).length, 14);
   assert.equal(c['rule-providers']['category-ads-all'].url, `${BASE}/mihomo/rules/category-ads-all.list`);
   assert.equal(c['rule-providers']['category-ads-all'].behavior, 'domain');
-  assert.equal(c['rule-providers'].cncidr.behavior, 'ipcidr');
+  // IP 类模块直接引用 geoip 官方产物（mrs），不再由我们编译
+  assert.deepEqual(c['rule-providers']['geoip-cn'], {
+    type: 'http',
+    behavior: 'ipcidr',
+    format: 'mrs',
+    url: 'https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/mrs/cn.mrs',
+    path: './mrs/geoip/cn.mrs',
+    interval: 86400,
+  });
+  assert.equal(c['rule-providers']['geoip-telegram'].url, 'https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/mrs/telegram.mrs');
+  // 自建模块仍是我们自己的产物
+  assert.equal(c['rule-providers']['category-ads-all'].url, `${BASE}/mihomo/rules/category-ads-all.list`);
+  assert.equal(c['rule-providers']['category-ads-all'].format, 'yaml');
   assert.equal(c['rule-providers'].f1tv.behavior, 'classical');
 });
 
@@ -30,7 +42,7 @@ test('rules 顺序 = order.yaml 顺序，target 映射正确，no-resolve 生效
   assert.deepEqual(c.rules, [
     'RULE-SET,category-ads-all,REJECT',
     'RULE-SET,private,direct',
-    'RULE-SET,lancidr,direct,no-resolve',
+    'RULE-SET,geoip-private,direct,no-resolve',
     'RULE-SET,f1tv,f1tv',
     'RULE-SET,microsoft,direct',
     'RULE-SET,apple,direct',
@@ -38,8 +50,8 @@ test('rules 顺序 = order.yaml 顺序，target 映射正确，no-resolve 生效
     'RULE-SET,steam,direct',
     'RULE-SET,applications,direct',
     'RULE-SET,gfw,proxies',
-    'RULE-SET,cncidr,direct,no-resolve',
-    'RULE-SET,telegramcidr,proxies',
+    'RULE-SET,geoip-cn,direct,no-resolve',
+    'RULE-SET,geoip-telegram,proxies',
     'RULE-SET,direct,direct',
     'RULE-SET,proxy,proxies',
   ]);

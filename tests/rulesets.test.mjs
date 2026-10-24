@@ -72,6 +72,28 @@ test('writeRuleSets 只产出 order 里列出的模块', async () => {
   );
 });
 
+test('kind=remote 的模块不落盘、不抓取', async () => {
+  const root = fixture();
+  const distDir = join(root, 'dist');
+  const fetched = [];
+  const files = await writeRuleSets({
+    rootDir: root,
+    distDir,
+    modules: {
+      alias: { kind: 'remote', behavior: 'ipcidr', category: 'cn' },
+      a: { behavior: 'domain', sources: ['https://x/a.txt'] },
+    },
+    order: [
+      { module: 'alias', target: 'direct' },
+      { module: 'a', target: 'direct' },
+    ],
+    fetcher: { get: async (u) => { fetched.push(u); return 'DOMAIN,a.com'; } },
+  });
+  assert.deepEqual(files.sort(), ['mihomo/rules/a.list', 'singbox/rules/a.json']);
+  assert.deepEqual(fetched, ['https://x/a.txt']);
+  assert.equal(existsSync(join(distDir, 'singbox/rules/alias.json')), false);
+});
+
 test('十万条级别的上游文件不爆栈（reject.txt 实测 20 万条）', async () => {
   const root = fixture();
   const big = Array.from({ length: 200_000 }, (_, i) => `DOMAIN-SUFFIX,d${i}.example.com`).join('\n');

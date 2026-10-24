@@ -1,16 +1,33 @@
-# 模块定义：sources 为上游文本（域名类→clash-rules，IP 类→geoip），custom 为本仓库自定义条目
+# 模块定义
+#   kind: remote  → IP 类，直接引用 Loyalsoldier/geoip 官方产物（srs / mrs），本地不抓取、不编译
+#   kind: built   → 省略即默认：域名/进程类，由本仓库从上游文本 + 自定义条目构建
+#   behavior      → domain | ipcidr | classical（决定 mihomo rule-provider 的类型）
+#   category      → kind=remote 时必填，对应 geoip release 下的文件名（cn / private / telegram / …）
+
+# ============ IP 类（geoip 官方产物） ============
+geoip-cn:
+  kind: remote
+  behavior: ipcidr
+  category: cn
+geoip-private:
+  kind: remote
+  behavior: ipcidr
+  category: private
+geoip-telegram:
+  kind: remote
+  behavior: ipcidr
+  category: telegram
+
+# ============ 域名 / 进程类（自建产物） ============
 category-ads-all:   # 即 Loyalsoldier 的 reject.txt（geosite:category-ads-all 的 clash 形态），纯上游，无 custom
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"]
 gfw:
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt"]
-private:
+private:            # 域名类内网（router.asus.com 之类），geoip 仓库没有域名列表
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"]
-lancidr:
-  behavior: ipcidr
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/text/private.txt"]
 f1tv:
   behavior: classical
   custom: rules/custom/f1tv.yaml
@@ -29,12 +46,6 @@ steam:
 applications:
   behavior: classical
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt"]
-cncidr:
-  behavior: ipcidr
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/text/cn.txt"]
-telegramcidr:
-  behavior: ipcidr
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/text/telegram.txt"]
 direct:
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"]

@@ -11,6 +11,9 @@ const DEFAULT_TYPE_OF = { domain: 'DOMAIN', ipcidr: 'IP-CIDR', classical: 'DOMAI
  * 返回 { name, behavior, entries }。
  */
 export async function buildRuleSet(name, mod, { rootDir = process.cwd(), fetcher } = {}) {
+  if (mod.kind === 'remote') {
+    throw new Error(`module "${name}" 是 kind=remote，不应调用 buildRuleSet`);
+  }
   const at = (p) => (isAbsolute(p) ? p : resolve(rootDir, p));
   const defaultType = DEFAULT_TYPE_OF[mod.behavior];
   if (!defaultType) throw new Error(`module "${name}" 的 behavior 非法: ${mod.behavior}`);
@@ -60,6 +63,7 @@ export async function writeRuleSets({
     done.add(entry.module);
     const mod = modules[entry.module];
     if (!mod) throw new Error(`order 引用了不存在的模块: ${entry.module}`);
+    if (mod.kind === 'remote') continue; // IP 类直接引官方产物，不落盘
     const { entries } = await buildRuleSet(entry.module, mod, { rootDir, fetcher });
 
     writeFileSync(join(jsonDir, `${entry.module}.json`), JSON.stringify(toHeadless(entries), null, 2) + '\n');

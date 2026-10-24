@@ -3,6 +3,7 @@ import { isAbsolute, resolve } from 'node:path';
 import { parse } from 'yaml';
 
 const BEHAVIORS = new Set(['domain', 'ipcidr', 'classical']);
+const KINDS = new Set(['built', 'remote']);
 const TARGETS = new Set(['reject', 'direct', 'proxies', 'f1tv']);
 
 function readYaml(path) {
@@ -45,6 +46,18 @@ export function loadModules(path) {
   const modules = {};
   for (const [name, def] of Object.entries(raw)) {
     if (!def || typeof def !== 'object') throw new Error(`module "${name}" 定义非法`);
+    const kind = def.kind ?? 'built';
+    if (!KINDS.has(kind)) throw new Error(`module "${name}" 的 kind 非法: ${def.kind}（只允许 built/remote）`);
+    if (kind === 'remote') {
+      if (typeof def.category !== 'string' || def.category === '') {
+        throw new Error(`module "${name}" 是 remote，必须给 category（geoip 文件名）`);
+      }
+      if (!BEHAVIORS.has(def.behavior)) {
+        throw new Error(`module "${name}" 的 behavior 非法: ${def.behavior}`);
+      }
+      modules[name] = { kind, behavior: def.behavior, category: def.category };
+      continue;
+    }
     if (!BEHAVIORS.has(def.behavior)) {
       throw new Error(`module "${name}" 的 behavior 非法: ${def.behavior}（只允许 domain/ipcidr/classical）`);
     }
@@ -61,6 +74,7 @@ export function loadModules(path) {
       throw new Error(`module "${name}" 的 custom 必须是文件路径字符串`);
     }
     modules[name] = {
+      kind,
       behavior: def.behavior,
       ...(def.sources ? { sources: [...def.sources] } : {}),
       ...(def.custom ? { custom: def.custom } : {}),

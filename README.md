@@ -3,7 +3,9 @@
 用 Sub-Store 一条链接下发**完整可跑的配置**（mihomo / sing-box 各一条），规则集自建、模块化、可 git 追溯。
 
 - 节点：只来自你的机场订阅，Sub-Store 负责过滤/去重/排序
-- 规则：本仓库生成，两端同源（`rules/order.yaml` + `rules/modules.yaml`）
+- 规则：两端同源（`rules/order.yaml` + `rules/modules.yaml`）
+  - **IP 类直接引用 [Loyalsoldier/geoip](https://github.com/Loyalsoldier/geoip) 官方产物**（sing-box 用 `release/srs/*.srs`，mihomo 用 `release/mrs/*.mrs`），本地不拉取不编译
+  - 域名 / 进程类由本仓库从 `Loyalsoldier/clash-rules` 构建（geoip 仓库只有 IP，没有域名列表）
 - 分组：`proxies` / `direct` / `f1tv` / `final` + 按地区自动生成的节点组
 - 产物：CI 每日构建，推送到 `dist` 分支，Sub-Store 直接 raw 引用
 
@@ -57,6 +59,7 @@ npm run validate
 |---|---|
 | 加一条自定义域名/进程规则 | `rules/custom/*.yaml`（`domain` / `domain_suffix` / `domain_keyword` / `domain_regex` / `ip_cidr` / `process_name`） |
 | 换某个模块的数据源 | `rules/modules.yaml` 的 `sources` |
+| 加一个 **IP 类**规则（推荐直引官方产物） | `rules/modules.yaml` 加 `{kind: remote, behavior: ipcidr, category: <cn/us/jp/netflix/google/…>}`，再在 `order.yaml` 加一行；本地不拉取、不编译 |
 | 调整规则顺序或目标组 | `rules/order.yaml`（目标只允许 `reject` / `direct` / `proxies` / `f1tv`） |
 | 加国家/地区组 | `config/regions.yaml` 加一行（有节点才生成） |
 | 换客户端参数（端口/MTU/DNS） | `templates/mihomo.yaml.tpl` / `templates/singbox.json.tpl` |

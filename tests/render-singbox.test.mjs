@@ -22,6 +22,10 @@ test('rule_set 按 order 顺序、url 指向 .srs、format=binary', () => {
   assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/category-ads-all.srs`);
   assert.equal(c.route.rule_set[0].format, 'binary');
   assert.equal(c.route.rule_set[0].update_interval, '1d');
+  // IP 类走 geoip 官方 srs
+  const cn = c.route.rule_set.find((r) => r.tag === 'geoip-cn');
+  assert.equal(cn.url, 'https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/srs/cn.srs');
+  assert.equal(cn.format, 'binary');
 });
 
 test('route 规则与 order 一致（reject 用 action=reject）', () => {
@@ -30,6 +34,7 @@ test('route 规则与 order 一致（reject 用 action=reject）', () => {
   assert.equal(routeRules.length, 14);
   assert.deepEqual(routeRules[0], { rule_set: 'category-ads-all', action: 'reject' });
   assert.deepEqual(routeRules[1], { rule_set: 'private', action: 'route', outbound: 'direct' });
+  assert.ok(routeRules.some((r) => r.rule_set === 'geoip-cn' && r.outbound === 'direct'));
 });
 
 test('1.14 约束：显式 http client、无 independent_cache、无 AAAA reject', () => {

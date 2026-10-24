@@ -264,7 +264,7 @@ f1tv:
 
 | 类型 | 来源 | 说明 |
 |---|---|---|
-| IP 类（`cncidr` / `lancidr` / `telegramcidr`） | **`Loyalsoldier/geoip@release/text/*.txt`** | 该仓库的原料输出（`cn.txt` / `private.txt` / `telegram.txt`，均实测 200）；还提供各国 `text/<cc>.txt`，将来要加"某国 IP 直连"直接换 URL |
+| IP 类（`geoip-cn` / `geoip-private` / `geoip-telegram`） | **`Loyalsoldier/geoip@release/srs/*.srs`（sing-box）+ `release/mrs/*.mrs`（mihomo）** | 该仓库的原料输出（`cn.txt` / `private.txt` / `telegram.txt`，均实测 200）；还提供各国 `text/<cc>.txt`，将来要加"某国 IP 直连"直接换 URL |
 | 域名类（`category-ads-all` / `gfw` / `private` / `apple` / `icloud` / `direct` / `proxy` / `applications`） | `Loyalsoldier/clash-rules@release/*.txt` | **`geoip` 仓库不发布域名列表**（`text/reject.txt`、`clash/`、`geosite/` 全部 404），只能留在 clash-rules |
 | `v2ray-rules-dat` | 不直接引用 | 只有 `geosite.dat`(11.4MB) / `geoip.dat`(16.6MB) protobuf；它是上述两个仓库的上游数据 |
 
