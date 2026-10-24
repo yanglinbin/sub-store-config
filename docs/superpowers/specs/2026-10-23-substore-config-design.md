@@ -286,10 +286,10 @@ f1tv:
 | `proxies` | select | 全部地区组 → `全部节点` → `DIRECT`（**末位**）；显示顺序第一 |
 | `direct` | select | `DIRECT`（**首位**，本组默认项）→ 全部地区组 → `proxies` |
 | `f1tv` | select | `美国`（美国组存在则首位，否则 `proxies`）→ 其他地区组 → `proxies` → `DIRECT`（**末位**） |
-| `final` | select | `DIRECT`（**首位**，本组默认项）→ 全部地区组 → `proxies` |
+| `final` | select | `proxies`（**首位**，本组默认项）→ `DIRECT` → 全部地区组 |
 | 各地区（动态，见下） | urltest | 该地区节点；**无节点则不生成该组** |
 
-**DIRECT 位置规则**（用户已确认）：只有"默认就是直连"的组（`direct`、`final`）把 `DIRECT` 放**首位**（因为首位即默认选中项），
+**DIRECT 位置规则**（2026-10-25 更新）：只有 `direct` 组把 `DIRECT` 放**首位**；`final` 默认改为 `proxies`，故 `proxies` 在首位（因为首位即默认选中项），
 其余组（`proxies`、`f1tv`）一律把 `DIRECT` 放**末位**作兜底。地区组不含 `DIRECT`。
 
 - 地区组**动态**："有什么国家生什么国家"。遍历节点名 + 旗帜命中 `config/regions.yaml`，只保留有节点的地区；
