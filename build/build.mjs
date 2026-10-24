@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadAll } from './load.mjs';
 import { createFetcher } from './fetch.mjs';
@@ -25,6 +25,12 @@ const rulesetFiles = await writeRuleSets({ modules, order, distDir: DIST, fetche
 console.log(`[1/5] 规则集 ${rulesetFiles.length} 个文件`);
 
 const srsOk = await compileSrs({ distDir: DIST });
+if (srsOk) {
+  // 模板只引用 .srs；.json 仅用于校验/排障，发布前删掉可把 dist 体积砍掉约 1/3
+  for (const f of readdirSync(join(DIST, 'singbox/rules'))) {
+    if (f.endsWith('.json')) rmSync(join(DIST, 'singbox/rules', f));
+  }
+}
 console.log(`[2/5] 规则集编译为 .srs: ${srsOk ? '是' : '否（退化为 source json）'}`);
 
 writeFileSync(join(DIST, 'mihomo/config.yaml'), renderMihomo({ regions, order, modules, baseUrl: BASE_URL }));

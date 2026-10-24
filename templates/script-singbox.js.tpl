@@ -4,6 +4,7 @@
 // 注意：本文件靠顶层 await 完成工作（Sub-Store 会把脚本内联进 async 函数体），
 //      不要包成 (async () => { ... })() 悬浮 Promise，否则 $content 会在赋值前被读取。
 const REGIONS = __REGIONS_JSON__;
+const REGION_EXCLUDE = __REGION_EXCLUDE__;
 
 __GROUPING_SRC__
 
@@ -26,7 +27,12 @@ const nodes = Array.isArray(artifact)
     : [];
 
 const tags = nodes.filter((n) => n && n.tag).map((n) => n.tag);
-const defs = buildGroupDefs({ names: tags, regions: REGIONS, style: 'singbox' });
+const defs = buildGroupDefs({
+  names: tags,
+  regions: REGIONS,
+  style: 'singbox',
+  regionExclude: REGION_EXCLUDE,
+});
 const groupTags = ['proxies', 'direct', 'f1tv', 'final'];
 
 const regionOutbounds = defs

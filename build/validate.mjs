@@ -30,14 +30,18 @@ function diffSequences(mihomoConfig, singboxConfig) {
   return problems;
 }
 
-async function compileAll(jsonFiles) {
+async function compileAll(files) {
   const problems = [];
   const out = mkdtempSync(join(tmpdir(), 'ssc-srs-'));
-  for (const file of jsonFiles) {
+  for (const file of files) {
     try {
-      await execFileAsync('sing-box', ['rule-set', 'compile', file, '-o', join(out, 'x.srs')]);
+      if (file.endsWith('.srs')) {
+        await execFileAsync('sing-box', ['rule-set', 'decompile', file, '-o', join(out, 'x.json')]);
+      } else {
+        await execFileAsync('sing-box', ['rule-set', 'compile', file, '-o', join(out, 'x.srs')]);
+      }
     } catch (err) {
-      problems.push(`rule-set 编译失败 ${file}: ${(err.stderr || err.message || '').trim()}`);
+      problems.push(`rule-set 校验失败 ${file}: ${(err.stderr || err.message || '').trim()}`);
     }
   }
   return problems;
@@ -73,13 +77,13 @@ export async function validateDist({ distDir = 'dist', baseUrl, skipBinaries = f
 
   if (!skipBinaries) {
     const rulesDir = join(dir, 'singbox/rules');
-    const jsonFiles = existsSync(rulesDir)
+    const ruleFiles = existsSync(rulesDir)
       ? readdirSync(rulesDir)
-          .filter((f) => f.endsWith('.json'))
+          .filter((f) => f.endsWith('.json') || f.endsWith('.srs'))
           .map((f) => join(rulesDir, f))
       : [];
-    if (jsonFiles.length === 0) problems.push('singbox/rules 下没有产物');
-    problems.push(...(await compileAll(jsonFiles)));
+    if (ruleFiles.length === 0) problems.push('singbox/rules 下没有产物');
+    problems.push(...(await compileAll(ruleFiles)));
     if (existsSync(singboxFile)) problems.push(...(await checkTemplate(singboxFile)));
     if (existsSync(join(dir, 'scripts/singbox.js')) === false) problems.push('缺少 scripts/singbox.js');
     if (existsSync(join(dir, 'scripts/mihomo.js')) === false) problems.push('缺少 scripts/mihomo.js');

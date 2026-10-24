@@ -12,32 +12,31 @@
 
 ---
 
-## 规则集（16 个模块）
+## 规则集（14 个模块）
 
 | # | 模块 | 来源 | 类型 | → 组 |
 |---|---|---|---|---|
-| 1 | `airport` | 自建（机场入口域名） | domain | direct |
-| 2 | `category-ads-all` | clash-rules `reject.txt` | domain | **reject** |
-| 3 | `private` | clash-rules `private.txt` | domain | direct |
-| 4 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
-| 5 | `f1tv` | 自建 | classical | **f1tv** |
-| 6 | `google` | 自建（含 `google.cn`/`googleapis.cn`） | domain | **proxies** |
-| 7 | `microsoft` | 自建（含 2 条 KEYWORD） | classical | direct |
-| 8 | `apple` | clash-rules `apple.txt` | domain | direct |
-| 9 | `icloud` | clash-rules `icloud.txt` | domain | direct |
-| 10 | `steam` | 自建（4 域名 + 40 CIDR） | classical | direct |
-| 11 | `applications` | clash-rules（98 条进程） | classical | direct |
-| 12 | `gfw` | clash-rules `gfw.txt` | domain | **proxies** |
-| 13 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
-| 14 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
-| 15 | `direct` | clash-rules `direct.txt` | domain | direct |
-| 16 | `proxy` | clash-rules `proxy.txt` | domain | **proxies** |
+| 1 | `category-ads-all` | clash-rules `reject.txt` | domain | **reject** |
+| 2 | `private` | clash-rules `private.txt` | domain | direct |
+| 3 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
+| 4 | `f1tv` | 自建 | classical | **f1tv** |
+| 5 | `microsoft` | 自建（含 2 条 KEYWORD） | classical | direct |
+| 6 | `apple` | clash-rules `apple.txt` | domain | direct |
+| 7 | `icloud` | clash-rules `icloud.txt` | domain | direct |
+| 8 | `steam` | 自建（4 域名 + 40 CIDR） | classical | direct |
+| 9 | `applications` | clash-rules（98 条进程） | classical | direct |
+| 10 | `gfw` | clash-rules `gfw.txt` | domain | **proxies** |
+| 11 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
+| 12 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
+| 13 | `direct` | clash-rules `direct.txt` | domain | direct |
+| 14 | `proxy` | clash-rules `proxy.txt` | domain | **proxies** |
 
-两个刻意的位置安排：
+未命中 → `final` 组。**两端都有兜底**：mihomo 末尾追加 `MATCH,final`，sing-box 用 `route.final: "final"`。
 
-- **`airport` 第一位**：机场入口域名必须直连，否则"用代理连代理入口"会绕路甚至环回
-- **`google` 在 `cncidr` 之前**：`google.cn` / `googleapis.cn` / `gstatic.cn` 在大陆可直连，按 IP 会被判直连；
-  用户要求这些 Google 域名**一律走 `proxies`**
+**Google 的走向**：`gfw` 列表里已含 251 条 Google/YouTube 域名（含 `google.cn`、`google.com`、`youtube.com`），
+它在 `cncidr` 之前，所以 Google 流量走 `proxies`。**例外**：`googleapis.cn`、`gstatic.cn`、
+`xn--ngstr-lra8j.com` 上游任何列表里都没有，会经 `cncidr` 判成直连——
+想找回就在 `rules/custom/` 加一个 3 行的清单并挂回 `modules.yaml` / `order.yaml`。
 
 sing-box 侧另有三个固定前置动作（不随 `order.yaml` 变化）：
 
@@ -57,10 +56,27 @@ sing-box 侧另有三个固定前置动作（不随 `order.yaml` 变化）：
 | `f1tv` | `美国` → 其他地区组 → `proxies` → `DIRECT` | `美国` |
 | `direct` | `DIRECT` → 地区组 → `proxies` | `DIRECT` |
 | `final` | `proxies` → `DIRECT` → 地区组 | `proxies`（未命中默认走代理） |
-| 地区组（有节点才生成，排最后） | 该地区节点（url-test） | — |
+| 地区组（排最后） | 该地区节点（url-test） | — |
 
-地区组 = `config/regions.yaml` 里**有节点**的那些国家；测速 URL `connectivitycheck.gstatic.com/generate_204`，
-`interval 60s`、`tolerance 500`（健康检查是 outbound 内部连接，不经过路由规则，命中规则与否无影响）。
+- 地区组只保留常用 5 个：**香港 / 台湾 / 日本 / 美国 / 新加坡**（`config/regions.yaml`）。
+  其余国家（阿根廷、澳大利亚、加拿大、法国、印度、俄罗斯、土耳其、乌克兰…）**不单独建组**，
+  节点仍在 `proxies` 组里可手动选。
+- 测速：`interval 300s`、`tolerance 500`；mihomo 额外 `lazy: true`（闲置不探测）。健康检查是 outbound
+  内部连接，不经过路由规则，命中规则与否无影响。
+- `config/node-filter.yaml` 的 `region_exclude_regex`（默认 `下载专用|x0\.01`）会把这类节点
+  **只从地区组里剔除**，仍保留在 `proxies`，避免 url-test 选中它们承载日常流量。
+
+### 两端全局差异（有意为之）
+
+| 项 | mihomo | sing-box |
+|---|---|---|
+| 分流入口 | 系统代理 `mixed-port 7890` | `tun`（`10.66.0.1/30` + `fdfe:dcba:9876::1/126`）+ `mixed 7890` |
+| DNS | `fake-ip` + DoH（223.5.5.5 / doh.pub），`proxy-server-nameserver` 走本地 DoH | `local-dns`/`remote-dns`(detour proxies) + `fakeip` |
+| 域名恢复 | `sniffer`（TLS/HTTP/QUIC + `parse-pure-ip`） | `{"action":"sniff"}` |
+| 控制 API | `127.0.0.1:9090`（不暴露局域网） | `127.0.0.1:9090` |
+
+> tun 网段用 `10.66.0.1/30` 而不是官方的 `172.19.0.1/30`：Docker 默认地址池是 `172.17–172.31`，
+> 服务器上跑 Docker 时 `172.19.x` 极易冲突。若你的服务器/局域网本身占用 `10.66.x`，改成别的 `/30`。
 
 ## 目录
 
@@ -192,3 +208,6 @@ sing-box `http_clients[].detour: proxies`），代价是**代理挂了规则集�
 - `PROCESS-NAME` / `process_name` 规则只在 Linux / Windows / macOS 生效
 - mihomo `find-process-mode: strict` 才能命中进程规则（已默认开启）
 - 本机没装 mihomo 时 `npm run probe` 会跳过 mihomo 那半（CI 里不会跳过）
+- mihomo 的 rule-provider 用 `format: text`（一行一条），不再用 YAML `payload:`：
+  实测 20 万条的 YAML 反序列化约 707ms，逐行切分约 26ms
+- `dist` 只发布编译后的 `.srs`（`.json` 源码在编译成功后删除），分支体积约 9MB

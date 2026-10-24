@@ -85,7 +85,8 @@ test('mihomo 脚本按 config.proxies 重建 proxy-groups', async () => {
   // mihomo 的自动测速组类型叫 url-test（带连字符），sing-box 才叫 urltest
   assert.equal(byName['香港'].type, 'url-test');
   assert.equal(byName['香港'].url, 'http://connectivitycheck.gstatic.com/generate_204');
-  assert.equal(byName['香港'].interval, 60);
+  assert.equal(byName['香港'].interval, 300);
+  assert.equal(byName['香港'].lazy, true);
   assert.equal(byName['香港'].tolerance, 500);
 });
 

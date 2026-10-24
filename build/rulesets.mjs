@@ -68,30 +68,22 @@ export async function writeRuleSets({
 
     writeFileSync(join(jsonDir, `${entry.module}.json`), JSON.stringify(toHeadless(entries), null, 2) + '\n');
 
-    // mihomo 的 yaml rule-provider 必须是 { payload: [...] }；单引号转义成两个单引号
+    // mihomo 用 format: text 读取：一行一条，无 YAML 包装。
+    // 相比 yaml 格式，省掉几十万条带引号字符串的反序列化（实测解析耗时相差约 27 倍）
     const payload = toMihomoPayload(entries, mod.behavior);
-    writeFileSync(
-      join(listDir, `${entry.module}.list`),
-      'payload:\n' +
-        payload.map((line) => `  - '${String(line).replace(/'/g, "''")}'`).join('\n') +
-        '\n',
-    );
+    writeFileSync(join(listDir, `${entry.module}.list`), payload.join('\n') + '\n');
     written.push(`singbox/rules/${entry.module}.json`, `mihomo/rules/${entry.module}.list`);
   }
   return written;
 }
 
-/** 统计 dist/singbox/rules/*.json 里的规则条目总数（用于 build-info）。 */
+/** 统计规则条目数：直接从 mihomo 的 text 产物按行数（编译成 .srs 后 json 会被删掉）。 */
 export function countEntries(distDir = 'dist') {
-  const dir = join(distDir, 'singbox/rules');
+  const dir = join(distDir, 'mihomo/rules');
   let total = 0;
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
-    const doc = JSON.parse(readFileSync(join(dir, file), 'utf8'));
-    for (const rule of doc.rules ?? []) {
-      for (const values of Object.values(rule)) {
-        if (Array.isArray(values)) total += values.length;
-      }
-    }
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.list'))) {
+    const text = readFileSync(join(dir, file), 'utf8');
+    total += text.split('\n').filter((l) => l.trim() !== '').length;
   }
   return total;
 }

@@ -272,10 +272,12 @@ f1tv:
 
 结论：IP 类已全部迁到 `geoip` 仓库；域名类没有可迁移的去处（除非自己解 protobuf），故保留 `clash-rules`。
 
-> **2026-10-25 现状（已重构完成）**：唯一上游 = `Loyalsoldier/clash-rules`（域名/IP/进程全量 11 个模块），
-> 自建 5 个模块：`airport`（机场入口直连）、`google`（Google 全域 → proxies，含 `google.cn`/`googleapis.cn`）、
-> `microsoft`、`steam`、`f1tv`。共 16 个模块，策略组保持极简（`proxies`/`direct`/`f1tv`/`final` + 动态地区组）。
-> sing-box 侧固定前置 `sniff` + `hijack-dns`，并在第一条 `ipcidr` 模块前自动插入 `resolve`（否则 fakeip 目标下 IP 规则永不命中）。
+> **2026-10-25 现状（优化轮）**：上游只有 `Loyalsoldier/clash-rules`，14 个模块
+> （11 上游 + `microsoft`/`steam`/`f1tv` 三个自建）。已移除 `airport` 与自定义 `google` 模块
+> （Google 由上游 `gfw` 覆盖，例外：`googleapis.cn`/`gstatic.cn`/`xn--ngstr-lra8j.com`）。
+> 地区组只保留港/台/日/美/新；`final` 默认 `proxies`，mihomo 追加 `MATCH,final` 兜底；
+> mihomo provider 改 `format: text`；mihomo 补 `sniffer` + `fake-ip` DNS + 控制 API 收回回环；
+> sing-box tun 网段改 `10.66.0.1/30` 避让 Docker；`cache_file` 用 `store_dns`（`store_rdrc` 已弃用）。
 
 ## 6. 分流规格
 

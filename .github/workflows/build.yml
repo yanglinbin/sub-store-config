@@ -84,3 +84,9 @@ jobs:
               commit -qm "build: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dist
 
+      - name: 远端 rule-set 下载冒烟（发布后）
+        continue-on-error: true   # jsDelivr 分支缓存可能还没刷新，失败不阻塞发布
+        env:
+          PROBE_REMOTE: '1'
+        run: npm run probe
+

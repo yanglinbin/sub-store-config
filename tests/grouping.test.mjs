@@ -62,7 +62,23 @@ test('短关键词按词边界匹配，避免 Australia/Economy/Sweden 误判', 
   assert.equal(detectRegion('IPLC-01-Economy', regions), null);
   assert.equal(detectRegion('🇸🇪 Sweden 01', regions), null);
   assert.equal(detectRegion('US-01', regions), '美国');
-  assert.equal(detectRegion('my02', regions), '马来西亚');
+  assert.equal(detectRegion('sg02', regions), '新加坡');
+});
+
+test('regionExclude 命中时只从地区组剔除，仍留在 proxies', () => {
+  const list = ['🇯🇵 日本W01', '🇯🇵 日本W05 | 下载专用 | x0.01', '🇭🇰 香港W01'];
+  const defs = buildGroupDefs({ names: list, regions, style: 'singbox', regionExclude: '下载专用|x0\.01' });
+  const jp = defs.find((d) => d.name === '日本');
+  assert.deepEqual(jp.members, ['🇯🇵 日本W01']);
+  const proxies = defs.find((d) => d.name === 'proxies');
+  assert.ok(proxies.members.includes('🇯🇵 日本W05 | 下载专用 | x0.01'));
+});
+
+test('测速间隔改为 300s（降低探测频率）', () => {
+  const defs = buildGroupDefs({ names, regions, style: 'mihomo' });
+  const hk = defs.find((d) => d.name === '香港');
+  assert.equal(hk.interval, 300);
+  assert.equal(hk.tolerance, 500);
 });
 
 test('组顺序：proxies → f1tv → direct → final → 地区组', () => {

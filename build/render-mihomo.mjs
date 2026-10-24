@@ -29,7 +29,7 @@ export function renderMihomo({ regions, order, modules, baseUrl, rootDir = proce
     ruleProviders[module] = {
       type: 'http',
       behavior: mod.behavior,
-      format: 'yaml',
+      format: 'text',
       url: `${baseUrl}/mihomo/rules/${module}.list`,
       path: `./ruleset/${module}.yaml`,
       interval: 86400,
@@ -41,6 +41,9 @@ export function renderMihomo({ regions, order, modules, baseUrl, rootDir = proce
     if (no_resolve) parts.push('no-resolve');
     return parts.join(',');
   });
+  // mihomo 没有 sing-box 的 route.final：不写 MATCH 时未命中流量会直连，
+  // 与 sing-box 的 final=proxies 不一致，所以必须显式兜底
+  rules.push('MATCH,final');
 
   const fallbackGroups = ['proxies', 'f1tv', 'direct', 'final'].map((name) => ({
     name,

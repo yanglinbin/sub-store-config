@@ -9,7 +9,7 @@
     ],
     "rules": [
       { "domain_suffix": [".lan", ".local", ".direct", ".localhost"], "server": "local-dns" },
-      { "domain_keyword": ["time", "ntp"], "server": "local-dns" },
+      { "domain_suffix": ["time.windows.com", "time.apple.com", "time.nist.gov", "pool.ntp.org", "ntp.aliyun.com", "ntp.tencent.com"], "server": "local-dns" },
       { "query_type": ["A", "AAAA"], "server": "fakeip" }
     ],
     "final": "remote-dns",
@@ -19,7 +19,7 @@
     {
       "type": "tun",
       "tag": "tun-in",
-      "address": ["172.19.0.1/30", "fdfe:dcba:9876::1/126"],
+      "address": ["10.66.0.1/30", "fdfe:dcba:9876::1/126"],
       "auto_route": true,
       "strict_route": true,
       "stack": "mixed",
@@ -43,7 +43,7 @@
     "rules": {{RULES}}
   },
   "experimental": {
-    "cache_file": { "enabled": true, "store_fakeip": true },
+    "cache_file": { "enabled": true, "store_fakeip": true, "store_dns": true },
     "clash_api": { "external_controller": "127.0.0.1:9090" }
   }
 }

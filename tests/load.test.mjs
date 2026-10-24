@@ -9,7 +9,7 @@ const tmp = () => mkdtempSync(join(tmpdir(), 'ssc-'));
 
 test('regions 解析出 10 个地区且字段齐全', () => {
   const regions = loadRegions('config/regions.yaml');
-  assert.equal(regions.length, 10);
+  assert.equal(regions.length, 5);
   assert.deepEqual(regions[0], {
     name: '香港',
     flag: '🇭🇰',
@@ -47,7 +47,7 @@ test('非法 behavior 抛错', () => {
 
 test('loadAll 读通仓库真实配置', () => {
   const { regions, modules, order } = loadAll();
-  assert.equal(order.length, 16);
-  assert.equal(Object.keys(modules).length, 16);
+  assert.equal(order.length, 14);
+  assert.equal(Object.keys(modules).length, 14);
   assert.ok(regions.every((r) => Array.isArray(r.keywords) && r.keywords.length > 0));
 });

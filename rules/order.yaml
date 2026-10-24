@@ -1,17 +1,16 @@
 # 顺序即生效顺序：先窄后宽
-- { module: airport,           target: direct }    # 1 入口直连，必须最先
-- { module: category-ads-all,  target: reject }    # 2 广告/跟踪
-- { module: private,           target: direct }    # 3 内网域名
-- { module: lancidr,           target: direct }    # 4 内网 IP
-- { module: f1tv,              target: f1tv }      # 5 F1TV
-- { module: google,            target: proxies }   # 6 Google 全域（含大陆可连域名）→ 代理
-- { module: microsoft,         target: direct }    # 7
-- { module: apple,             target: direct }    # 8
-- { module: icloud,            target: direct }    # 9
-- { module: steam,             target: direct }    # 10
-- { module: applications,      target: direct }    # 11 进程直连
-- { module: gfw,               target: proxies }   # 12 GFW 域名（须在 cncidr 前）
-- { module: cncidr,            target: direct }    # 13 CN IP
-- { module: telegramcidr,      target: proxies }   # 14
-- { module: direct,            target: direct }    # 15 CN 域名
-- { module: proxy,             target: proxies }   # 16 其余海外域名
+- { module: category-ads-all,  target: reject }    # 1 广告/跟踪
+- { module: private,           target: direct }    # 2 内网域名
+- { module: lancidr,           target: direct }    # 3 内网 IP
+- { module: f1tv,              target: f1tv }      # 4 F1TV
+- { module: microsoft,         target: direct }    # 5
+- { module: apple,             target: direct }    # 6
+- { module: icloud,            target: direct }    # 7
+- { module: steam,             target: direct }    # 8
+- { module: applications,      target: direct }    # 9 进程直连
+- { module: gfw,               target: proxies }   # 10 GFW 域名（含 Google），须在 cncidr 前
+- { module: cncidr,            target: direct }    # 11 CN IP
+- { module: telegramcidr,      target: proxies }   # 12
+- { module: direct,            target: direct }    # 13 CN 域名
+- { module: proxy,             target: proxies }   # 14 其余海外域名
+# 未命中 → final 组（mihomo 由 MATCH,final 兜底；sing-box 由 route.final）

@@ -19,8 +19,8 @@ test('rule_set 按 order 顺序、url 指向 .srs、format=binary', () => {
     c.route.rule_set.map((r) => r.tag),
     loadAll().order.map((o) => o.module),
   );
-  assert.equal(c.route.rule_set.length, 16);
-  assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/airport.srs`);
+  assert.equal(c.route.rule_set.length, 14);
+  assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/category-ads-all.srs`);
   assert.equal(c.route.rule_set[0].format, 'binary');
   assert.equal(c.route.rule_set[0].update_interval, '1d');
 });
@@ -36,11 +36,13 @@ test('route 规则与 order 一致（reject 用 action=reject）', () => {
   assert.ok(idxResolve > 0 && idxResolve < idxFirstIp, 'resolve 必须在第一条 IP 规则之前');
 
   const routeRules = c.route.rules.filter((r) => r.rule_set);
-  assert.equal(routeRules.length, 16);
-  assert.deepEqual(routeRules[0], { rule_set: 'airport', action: 'route', outbound: 'direct' });
-  assert.deepEqual(routeRules[1], { rule_set: 'category-ads-all', action: 'reject' });
-  const google = routeRules.find((r) => r.rule_set === 'google');
-  assert.deepEqual(google, { rule_set: 'google', action: 'route', outbound: 'proxies' });
+  assert.equal(routeRules.length, 14);
+  assert.deepEqual(routeRules[0], { rule_set: 'category-ads-all', action: 'reject' });
+  assert.deepEqual(routeRules[1], { rule_set: 'private', action: 'route', outbound: 'direct' });
+  assert.deepEqual(
+    routeRules.find((r) => r.rule_set === 'gfw'),
+    { rule_set: 'gfw', action: 'route', outbound: 'proxies' },
+  );
 });
 
 test('1.14 约束：显式 http client、无 independent_cache、无 AAAA reject', () => {
@@ -49,12 +51,15 @@ test('1.14 约束：显式 http client、无 independent_cache、无 AAAA reject
   assert.ok(Array.isArray(c.http_clients) && c.http_clients.length === 1);
   assert.ok(!('independent_cache' in c.dns));
   assert.ok(!JSON.stringify(c.dns.rules).includes('"reject"'));
+  // NTP 白名单要用后缀，不能是 domain_keyword ["time","ntp"]（会误伤 timesofindia 之类）
+  assert.ok(!JSON.stringify(c.dns.rules).includes('"domain_keyword"'));
+  assert.equal(c.experimental.cache_file.store_dns, true);
   assert.equal(c.dns.strategy, 'prefer_ipv4');
 });
 
 test('tun 双栈 + fakeip 含 v6 段 + final=final', () => {
   const c = render();
-  assert.deepEqual(c.inbounds[0].address, ['172.19.0.1/30', 'fdfe:dcba:9876::1/126']);
+  assert.deepEqual(c.inbounds[0].address, ['10.66.0.1/30', 'fdfe:dcba:9876::1/126']);
   const fakeip = c.dns.servers.find((s) => s.type === 'fakeip');
   assert.equal(fakeip.inet6_range, 'fc00::/18');
   assert.equal(c.route.final, 'final');

@@ -29,6 +29,7 @@ export async function emitScripts({ regionsPath = 'config/regions.yaml', outDir,
   if (typeof excludeRegex !== 'string' || excludeRegex === '') {
     throw new Error('config/node-filter.yaml 缺少 exclude_regex');
   }
+  const regionExclude = filterCfg.region_exclude_regex || '';
   const nodesTpl = readFileSync(resolve(rootDir, 'templates/script-nodes.js.tpl'), 'utf8');
   writeFileSync(
     join(dir, 'nodes.js'),
@@ -41,6 +42,7 @@ export async function emitScripts({ regionsPath = 'config/regions.yaml', outDir,
     // 用函数形式替换：字符串形式会把源码里的 `$'`/`$&` 当成替换模式
     const code = tpl
       .replace('__REGIONS_JSON__', () => regionsJson)
+      .replace('__REGION_EXCLUDE__', () => JSON.stringify(regionExclude))
       .replace('__GROUPING_SRC__', () => src);
     if (code.includes('export ') || code.includes('import ')) {
       throw new Error(`${name} 脚本产物仍含 import/export，Sub-Store 无法直接执行`);

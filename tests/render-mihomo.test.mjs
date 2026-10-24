@@ -10,39 +10,37 @@ const render = () => parse(renderMihomo({ ...loadAll(), baseUrl: BASE }));
 test('全局字段与 spec 一致', () => {
   const c = render();
   assert.equal(c['mixed-port'], 7890);
-  assert.equal(c['external-controller'], ':9090');
+  assert.equal(c['external-controller'], '127.0.0.1:9090');
   assert.equal(c.ipv6, true);
   assert.equal(c['allow-lan'], true);
-  assert.deepEqual(c.profile, { 'store-selected': true, 'store-fake-ip': false });
+  assert.deepEqual(c.profile, { 'store-selected': true, 'store-fake-ip': true });
 });
 
-test('rule-providers：全部来自 clash-rules 构建产物', () => {
+test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格式', () => {
   const c = render();
-  assert.equal(Object.keys(c['rule-providers']).length, 16);
+  assert.equal(Object.keys(c['rule-providers']).length, 14);
 
   assert.deepEqual(c['rule-providers']['category-ads-all'], {
     type: 'http',
     behavior: 'domain',
-    format: 'yaml',
+    format: 'text',
     url: `${BASE}/mihomo/rules/category-ads-all.list`,
     path: './ruleset/category-ads-all.yaml',
     interval: 86400,
   });
   assert.equal(c['rule-providers'].cncidr.behavior, 'ipcidr');
+  assert.equal(c['rule-providers'].cncidr.format, 'text');
   assert.equal(c['rule-providers'].f1tv.behavior, 'classical');
-  assert.equal(c['rule-providers'].google.url, `${BASE}/mihomo/rules/google.list`);
-  assert.equal(c['rule-providers'].airport.behavior, 'domain');
+  assert.equal(c['rule-providers'].gfw.url, `${BASE}/mihomo/rules/gfw.list`);
 });
 
-test('rules 顺序 = order.yaml 顺序，target 映射正确，google 在 cncidr 之前', () => {
+test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
   const c = render();
   assert.deepEqual(c.rules, [
-    'RULE-SET,airport,direct',
     'RULE-SET,category-ads-all,REJECT',
     'RULE-SET,private,direct',
     'RULE-SET,lancidr,direct',
     'RULE-SET,f1tv,f1tv',
-    'RULE-SET,google,proxies',
     'RULE-SET,microsoft,direct',
     'RULE-SET,apple,direct',
     'RULE-SET,icloud,direct',
@@ -53,8 +51,17 @@ test('rules 顺序 = order.yaml 顺序，target 映射正确，google 在 cncidr
     'RULE-SET,telegramcidr,proxies',
     'RULE-SET,direct,direct',
     'RULE-SET,proxy,proxies',
+    'MATCH,final',
   ]);
-  assert.ok(c.rules.indexOf('RULE-SET,google,proxies') < c.rules.indexOf('RULE-SET,cncidr,direct'));
+});
+
+test('安全与解析相关全局项', () => {
+  const c = render();
+  assert.equal(c['external-controller'], '127.0.0.1:9090', '控制 API 不能绑 0.0.0.0');
+  assert.equal(c.sniffer.enable, true, '缺 sniffer 时纯 IP / DoH 连接无法按域名分流');
+  assert.equal(c.dns['enhanced-mode'], 'fake-ip');
+  assert.deepEqual(c.dns['proxy-server-nameserver'], ['https://223.5.5.5/dns-query']);
+  assert.ok(!('proxy-providers' in c), 'proxy-providers 是死键');
 });
 
 test('fallback 骨架包含四个组且非空', () => {

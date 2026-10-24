@@ -1,4 +1,4 @@
-# 模块定义：唯一上游 = Loyalsoldier/clash-rules（域名 + IP + 进程），其余为仓库内自定义清单
+# 模块定义：唯一上游 = Loyalsoldier/clash-rules；自建清单只有 microsoft / steam / f1tv
 #   sources → clash-rules 文本（CI 构建时抓取并转成两端产物）
 #   custom  → rules/custom/*.yaml（本仓库维护）
 #   behavior→ domain | ipcidr | classical（决定 mihomo rule-provider 类型）
@@ -19,7 +19,7 @@ apple:
 icloud:
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt"]
-gfw:
+gfw:                # 含 google.cn / google.com / youtube.com 等 251 条 Google 相关
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt"]
 applications:
@@ -39,12 +39,6 @@ proxy:
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"]
 
 # ============ 自建（仓库内维护） ============
-airport:              # 机场入口直连（从订阅分析得出）
-  behavior: domain
-  custom: rules/custom/airport.yaml
-google:               # Google 全域含 google.cn，强制走代理
-  behavior: domain
-  custom: rules/custom/google.yaml
 microsoft:
   behavior: classical
   custom: rules/custom/microsoft.yaml
