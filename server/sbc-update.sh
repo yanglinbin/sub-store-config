@@ -9,11 +9,16 @@
 set -u
 
 # 订阅源优先级：环境变量 > /etc/default/sbc-update > 内置默认（桌面共用文件）
-SUBSTORE_FILE_URL="${SUBSTORE_FILE_URL:-}"
-if [ -z "$SUBSTORE_FILE_URL" ] && [ -r /etc/default/sbc-update ]; then
+# /etc/default 里还有 REQUIRE_AUTO_REDIRECT 等开关，所以**总是**读它；
+# 但作业环境显式给的 SUBSTORE_FILE_URL 优先（便于临时换源排障）
+if [ -r /etc/default/sbc-update ]; then
+    _env_url="${SUBSTORE_FILE_URL:-}"
     # shellcheck disable=SC1091
     . /etc/default/sbc-update
+    [ -n "$_env_url" ] && SUBSTORE_FILE_URL="$_env_url"
+    unset _env_url
 fi
+SUBSTORE_FILE_URL="${SUBSTORE_FILE_URL:-}"
 SUBSTORE_FILE_URL="${SUBSTORE_FILE_URL:-https://sub-store.yilabao.top/cdc1dc50c1a6799f49c87914ef77def3/api/file/singbox}"
 CFG=/etc/sing-box/config.json
 BAK_GLOB=/etc/sing-box/config.json.bak
