@@ -57,7 +57,20 @@ fi
 # 替换：属主 root:sing-box 640，sing-box 服务（User=sing-box）才能读到
 install -o root -g sing-box -m 640 "$TMP" "$CFG" || fail "写入 $CFG 失败"
 
-systemctl restart sing-box || fail "systemctl restart sing-box 失败（旧配置已备份，可用回滚命令恢复）"
-systemctl is-active --quiet sing-box || fail "重启后 sing-box 未处于 active（检查 journalctl -u sing-box -n 50）"
+restart_or_rollback() {
+    systemctl restart sing-box 2>/dev/null
+    systemctl is-active --quiet sing-box && return 0
+    # 起不来就回滚到上一份，避免整机因为一份坏配置长时间断网
+    prev=$(ls -1t "$BAK_GLOB".* 2>/dev/null | head -1)
+    [ -n "$prev" ] || fail "重启后 sing-box 未处于 active，且没有可回滚的备份（检查 journalctl -u sing-box -n 50）"
+    echo "[WARN] 新配置起不来，回滚到 $prev" >&2
+    install -o root -g sing-box -m 640 "$prev" "$CFG" || fail "回滚写入 $CFG 失败"
+    systemctl restart sing-box 2>/dev/null
+    systemctl is-active --quiet sing-box         || fail "回滚后仍起不来，需要人工介入（journalctl -u sing-box -n 100）"
+    fail "新配置导致 sing-box 无法启动，已自动回滚到 $prev"
+}
+
+restart_or_rollback
+
 
 echo "[OK] 配置已更新并重启：$nodes 个节点"

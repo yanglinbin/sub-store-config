@@ -21,6 +21,7 @@ SUBNETS="${SUBNETS:-172.17.0.0/16 172.18.0.0/16 172.19.0.0/16}"
 PRIVATE="${PRIVATE:-10.0.0.0/8 172.16.0.0/12 192.168.0.0/16}"
 # 发布端口回程包的 mark。/mask：只写低 12 位，避免覆盖别人打的 mark
 MARK=0x233
+MARK_MASK="$MARK/$MARK"   # ip rule 里必须带掩码，否则按整 32 位精确匹配
 
 TUN=tun0
 TUN_TABLE=2022
@@ -48,7 +49,7 @@ add_rule() {
 
 # 清掉本脚本可能留下的所有规则（up 的开头与 down 共用）
 flush_rules() {
-    del_rule pref "$PRIO_MARK" fwmark "$MARK" lookup main
+    del_rule pref "$PRIO_MARK"
     for net in $SUBNETS; do
         del_rule from "$net" lookup "$TUN_TABLE" pref "$PRIO_TO_TUN"
         del_rule from "$net" lookup main pref "$PRIO_FALLBACK"
@@ -74,7 +75,7 @@ up() {
         || die "iptables mangle PREROUTING 加 mark 规则失败"
 
     # 2) 带 mark 的包先看主表（优先级 90 < 98 < 100，所以先于下面两条生效）
-    add_rule fwmark "$MARK" lookup main pref "$PRIO_MARK"
+    add_rule fwmark "$MARK_MASK" lookup main pref "$PRIO_MARK"
 
     # 3) 每个容器网段：私网直连 + 其余交给 tun 表
     for net in $SUBNETS; do
@@ -85,7 +86,7 @@ up() {
 
     # 4) 守卫：sing-box 没起时 tun0 不存在，此时把容器流量指向 tun 表等于黑洞（容器全断网）。
     #    这种情况改为「容器继续直连」，只保证不断网，等 sing-box 起来后重跑本脚本。
-    if ip link show "$TUN" >/dev/null 2>&1; then
+    if ip link show "$TUN" >/dev/null 2>&1 && [ -n "$(ip route show table "$TUN_TABLE" 2>/dev/null)" ]; then
         for net in $SUBNETS; do
             add_rule from "$net" lookup "$TUN_TABLE" pref "$PRIO_TO_TUN"
         done
@@ -94,7 +95,7 @@ up() {
         for net in $SUBNETS; do
             add_rule from "$net" lookup main pref "$PRIO_FALLBACK"
         done
-        echo "[WARN] 找不到 $TUN（sing-box 未启动？）：本次只保证容器不断网，流量仍走主表直连。" >&2
+        echo "[WARN] 找不到 $TUN 或表 $TUN_TABLE 没有路由（sing-box 未启动？）：本次只保证容器不断网，流量仍走主表直连。" >&2
         echo "[WARN] sing-box 起来后重跑：$0 up" >&2
     fi
 }
