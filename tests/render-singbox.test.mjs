@@ -19,7 +19,7 @@ test('rule_set 按 order 顺序、url 指向 .srs、format=binary', () => {
     c.route.rule_set.map((r) => r.tag),
     loadAll().order.map((o) => o.module),
   );
-  assert.equal(c.route.rule_set.length, 16);
+  assert.equal(c.route.rule_set.length, 17);
   assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/subscription.srs`);
   assert.equal(c.route.rule_set[0].format, 'binary');
   assert.equal(c.route.rule_set[0].update_interval, '1d');
@@ -40,9 +40,11 @@ test('route 规则与 order 一致（reject 用 action=reject）', () => {
 
 
   const routeRules = c.route.rules.filter((r) => r.rule_set);
-  assert.equal(routeRules.length, 16);
+  assert.equal(routeRules.length, 17);
   assert.deepEqual(routeRules[0], { rule_set: 'subscription', action: 'route', outbound: 'proxies' });
-  assert.deepEqual(routeRules[2], { rule_set: 'private', action: 'route', outbound: 'direct' });
+  assert.deepEqual(routeRules[1], { rule_set: 'selfhost', action: 'route', outbound: 'direct' });
+  assert.deepEqual(routeRules[2], { rule_set: 'category-ads-all', action: 'reject' });
+  assert.deepEqual(routeRules[3], { rule_set: 'private', action: 'route', outbound: 'direct' });
   assert.deepEqual(
     routeRules.find((r) => r.rule_set === 'gfw'),
     { rule_set: 'gfw', action: 'route', outbound: 'proxies' },

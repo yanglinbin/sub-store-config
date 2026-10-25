@@ -18,7 +18,7 @@ test('全局字段与 spec 一致', () => {
 
 test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格式', () => {
   const c = render();
-  assert.equal(Object.keys(c['rule-providers']).length, 16);
+  assert.equal(Object.keys(c['rule-providers']).length, 17);
 
   assert.deepEqual(c['rule-providers']['category-ads-all'], {
     type: 'http',
@@ -39,6 +39,7 @@ test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
   const c = render();
   assert.deepEqual(c.rules, [
     'RULE-SET,subscription,proxies',
+    'RULE-SET,selfhost,direct',
     'RULE-SET,category-ads-all,REJECT',
     'RULE-SET,private,direct',
     'RULE-SET,f1tv,f1tv',
