@@ -28,8 +28,8 @@ test('direct/final 的 DIRECT 在首位，proxies 的 DIRECT 在末位', () => {
   const defs = buildGroupDefs({ names, regions, style: 'singbox' });
   const get = (n) => defs.find((d) => d.name === n);
   assert.equal(get('direct').members[0], 'DIRECT');
-  assert.equal(get('final').members[0], 'proxies');
-  assert.equal(get('final').default, 'proxies');
+  assert.equal(get('final').members[0], 'DIRECT');
+  assert.equal(get('final').default, 'DIRECT');
   assert.equal(get('proxies').members[0], '香港');
   assert.equal(get('proxies').members.at(-1), 'DIRECT');
   assert.deepEqual(get('proxies').members.slice(0, 3), ['香港', '日本', '美国']);
@@ -46,14 +46,14 @@ test('零节点不生成地区组，且 proxies 仍非空', () => {
   assert.ok(defs.every((d) => d.members.length > 0));
 });
 
-test('直连 outbound 统一写 DIRECT；final 默认是 proxies', () => {
+test('直连 outbound 统一写 DIRECT；final 默认也是 DIRECT', () => {
   const defs = buildGroupDefs({ names, regions, style: 'mihomo' });
-  assert.equal(defs.find((d) => d.name === 'final').members[0], 'proxies');
-  assert.ok(defs.find((d) => d.name === 'final').members.includes('DIRECT'));
+  assert.equal(defs.find((d) => d.name === 'final').members[0], 'DIRECT');
+  assert.ok(defs.find((d) => d.name === 'final').members.includes('proxies'));
   assert.equal(defs.find((d) => d.name === 'proxies').members.at(-1), 'DIRECT');
   assert.equal(defs.find((d) => d.name === 'direct').members[0], 'DIRECT');
   const sb = buildGroupDefs({ names, regions, style: 'singbox' });
-  assert.equal(sb.find((d) => d.name === 'final').default, 'proxies');
+  assert.equal(sb.find((d) => d.name === 'final').default, 'DIRECT');
   assert.ok(sb.find((d) => d.name === 'direct').members.includes('DIRECT'));
 });
 

@@ -79,7 +79,7 @@ sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 | `proxies` | 地区组 → 全部节点 → `DIRECT` | 第一个地区组 |
 | `f1tv` | `美国` → 其他地区组 → `proxies` → `DIRECT` | `美国` |
 | `direct` | `DIRECT` → 地区组 → `proxies` | `DIRECT` |
-| `final` | `proxies` → `DIRECT` → 地区组 | `proxies`（未命中默认走代理） |
+| `final` | `DIRECT` → `proxies` → 地区组 | `DIRECT`（未命中默认直连） |
 | 地区组（排最后） | 该地区节点（url-test） | — |
 
 - 地区组只保留常用 5 个：**香港 / 台湾 / 日本 / 美国 / 新加坡**（`config/regions.yaml`）。

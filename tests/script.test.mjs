@@ -56,7 +56,7 @@ test('singbox 脚本注入节点、生成地区组与四个组', async () => {
   assert.equal(byTag.proxies.default, '香港');
   assert.equal(byTag.direct.outbounds[0], 'DIRECT');
   assert.ok(byTag.proxies.outbounds.includes('🇭🇰Hong Kong 03'));
-  assert.equal(byTag.final.outbounds[0], 'proxies');
+  assert.equal(byTag.final.outbounds[0], 'DIRECT');
 });
 
 test('订阅为空时仍产出可启动配置', async () => {
@@ -79,7 +79,7 @@ test('mihomo 脚本按 config.proxies 重建 proxy-groups', async () => {
     'proxy-groups': [],
   });
   const byName = Object.fromEntries(out['proxy-groups'].map((g) => [g.name, g]));
-  assert.equal(byName.final.proxies[0], 'proxies');
+  assert.equal(byName.final.proxies[0], 'DIRECT');
   assert.equal(byName.proxies.proxies.at(-1), 'DIRECT');
   assert.ok(byName.proxies.proxies.includes('🇭🇰Hong Kong 03'));
   // mihomo 的自动测速组类型叫 url-test（带连字符），sing-box 才叫 urltest
@@ -130,8 +130,8 @@ test('脚本产出的配置能被 sing-box 接受，且成员顺序符合规范'
   ]);
   const byTag = Object.fromEntries(cfg.outbounds.map((o) => [o.tag, o]));
 
-  assert.equal(byTag.final.outbounds[0], 'proxies');
-  assert.equal(byTag.final.default, 'proxies');
+  assert.equal(byTag.final.outbounds[0], 'DIRECT');
+  assert.equal(byTag.final.default, 'DIRECT');
   assert.equal(byTag.direct.outbounds[0], 'DIRECT');
   assert.equal(byTag.f1tv.outbounds[0], '美国');
   assert.equal(byTag.f1tv.outbounds.at(-1), 'DIRECT');

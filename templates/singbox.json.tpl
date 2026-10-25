@@ -31,7 +31,7 @@
     { "type": "selector", "tag": "proxies", "outbounds": ["DIRECT"], "default": "DIRECT", "interrupt_exist_connections": true },
     { "type": "selector", "tag": "f1tv", "outbounds": ["DIRECT"], "interrupt_exist_connections": true },
     { "type": "selector", "tag": "direct", "outbounds": ["DIRECT"], "interrupt_exist_connections": true },
-    { "type": "selector", "tag": "final", "outbounds": ["proxies", "DIRECT"], "default": "proxies", "interrupt_exist_connections": true },
+    { "type": "selector", "tag": "final", "outbounds": ["DIRECT", "proxies"], "default": "DIRECT", "interrupt_exist_connections": true },
     { "type": "direct", "tag": "DIRECT" }
   ],
   "route": {
