@@ -62,6 +62,16 @@ sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 | `resolve` 全局改成只作用于 `rule_set: [cncidr, telegramcidr]` | **采纳意图，改用更正确的做法** | 给 `resolve` 加 `rule_set` 是无效的：`ip_cidr` 规则集在"还不知道目标 IP"时无法匹配，会永不触发。正确做法是把 **所有域名规则前置**，`resolve` 自然只对剩余连接生效（已在 `order.yaml` 落地） |
 | `strict_route: true` 在 Windows 会挡局域网 | **证据不足，保留 true** | 1.14 文档里 Windows 下 `strict_route` 只声明三件事：不支持的网络不可达、阻止多网卡 DNS 泄露、非 TUN 接口的 53 端口被封；**没有**"挡局域网"的描述。如果你实测访问 NAS/打印机异常，把模板里 `strict_route` 改 `false` 即可 |
 
+## 产物变体：规则集直连下载 vs 经代理下载
+
+| 文件 | 规则集怎么下 | 适合 |
+|---|---|---|
+| `mihomo/config.yaml` / `singbox/template.json` | 直连 CDN | 默认；代理挂了也能启动 |
+| `mihomo/config-proxy.yaml` / `singbox/template-proxy.json` | 经 `proxies` 组 | 直连 CDN 不通、节点确认可用 |
+
+> 经代理下载的已知风险：sing-box 启动时 urltest 还没测速，会先用第一个成员；
+> 若那一个节点是死的，15 个 rule-set 全部失败 → `FATAL`。用这个变体前请确认节点可用。
+
 ## 策略组
 
 | 组（按显示顺序） | 成员顺序 | 默认 |

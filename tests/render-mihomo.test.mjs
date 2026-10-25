@@ -71,3 +71,9 @@ test('fallback 骨架包含四个组且非空', () => {
   assert.deepEqual(c['proxy-groups'].map((g) => g.name), ['proxies', 'f1tv', 'direct', 'final']);
   assert.ok(c['proxy-groups'].every((g) => g.proxies.length >= 1));
 });
+
+test('ruleDownload=proxy 时每个 provider 带 proxy: proxies', () => {
+  const c = parse(renderMihomo({ ...loadAll(), baseUrl: BASE, ruleDownload: 'proxy' }));
+  const ps = Object.values(c['rule-providers']);
+  assert.equal(ps.filter((p) => p.proxy === 'proxies').length, ps.length);
+});

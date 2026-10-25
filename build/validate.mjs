@@ -66,13 +66,16 @@ export async function validateDist({ distDir = 'dist', baseUrl, skipBinaries = f
   const mihomoFile = join(dir, 'mihomo/config.yaml');
   const singboxFile = join(dir, 'singbox/template.json');
 
-  if (!existsSync(mihomoFile)) problems.push(`缺少 ${mihomoFile}`);
-  if (!existsSync(singboxFile)) problems.push(`缺少 ${singboxFile}`);
-
-  if (existsSync(mihomoFile) && existsSync(singboxFile)) {
-    problems.push(
-      ...diffSequences(parse(readFileSync(mihomoFile, 'utf8')), JSON.parse(readFileSync(singboxFile, 'utf8'))),
-    );
+  for (const [m, sf] of [
+    ['mihomo/config.yaml', 'singbox/template.json'],
+    ['mihomo/config-proxy.yaml', 'singbox/template-proxy.json'],
+  ]) {
+    const mf = join(dir, m), sfile = join(dir, sf);
+    if (!existsSync(mf)) problems.push(`缺少 ${m}`);
+    if (!existsSync(sfile)) problems.push(`缺少 ${sf}`);
+    if (existsSync(mf) && existsSync(sfile)) {
+      problems.push(...diffSequences(parse(readFileSync(mf, 'utf8')), JSON.parse(readFileSync(sfile, 'utf8'))));
+    }
   }
 
   if (!skipBinaries) {
