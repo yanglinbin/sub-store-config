@@ -27,12 +27,15 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # 规则集基址（自托管时是 https://sub-store.yilabao.top/sbc，见 README「服务器部署与运维」）
+      BASE_URL: ${{ vars.RULES_BASE_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: 安装 sing-box（校验 + 后续可编 .srs 用）
@@ -43,7 +46,7 @@ jobs:
           sing-box version
 
       - name: 缓存上游规则（拉不到时兜底，避免 jsdelivr 抖动导致构建失败）
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache
           key: rules-cache-${{ github.run_id }}
