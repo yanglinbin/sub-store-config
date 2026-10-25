@@ -208,7 +208,7 @@ sudo /usr/local/bin/sbc-update.sh
 | 看日志 | `journalctl -u sbc-update -u sbc-sync-dist -n 100` |
 | 看下次触发 | `systemctl list-timers 'sbc-*'` |
 | 回滚配置 | `sudo install -o root -g sing-box -m 640 /etc/sing-box/config.json.bak.<时间戳> /etc/sing-box/config.json && sudo systemctl restart sing-box` |
-| 关/开容器分流 | `sudo systemctl stop|start docker-via-tun.service` |
+| 关/开容器分流 | `sudo systemctl stop docker-via-tun.service`（`start` 恢复） |
 
 配置备份只保留最近 3 份，`ls -1t /etc/sing-box/config.json.bak.*` 可查。
 
