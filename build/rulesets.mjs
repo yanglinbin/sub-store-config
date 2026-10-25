@@ -77,13 +77,23 @@ export async function writeRuleSets({
   return written;
 }
 
-/** 统计规则条目数：直接从 mihomo 的 text 产物按行数（编译成 .srs 后 json 会被删掉）。 */
-export function countEntries(distDir = 'dist') {
+/**
+ * 按模块统计规则条目数：读 dist/mihomo/rules/<模块>.list 的有效行数。
+ * kind=remote 的模块直接引用官方产物、本地不落盘，因此不会出现在结果里。
+ */
+export function countEntriesByModule(distDir = 'dist') {
   const dir = join(distDir, 'mihomo/rules');
-  let total = 0;
+  const byModule = {};
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.list'))) {
     const text = readFileSync(join(dir, file), 'utf8');
-    total += text.split('\n').filter((l) => l.trim() !== '').length;
+    byModule[file.slice(0, -'.list'.length)] = text.split('\n').filter((l) => l.trim() !== '').length;
   }
+  return byModule;
+}
+
+/** 统计规则条目总数：直接从 mihomo 的 text 产物按行数（编译成 .srs 后 json 会被删掉）。 */
+export function countEntries(distDir = 'dist') {
+  let total = 0;
+  for (const n of Object.values(countEntriesByModule(distDir))) total += n;
   return total;
 }

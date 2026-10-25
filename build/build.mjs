@@ -2,7 +2,7 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadAll } from './load.mjs';
 import { createFetcher } from './fetch.mjs';
-import { writeRuleSets, countEntries } from './rulesets.mjs';
+import { writeRuleSets, countEntries, countEntriesByModule } from './rulesets.mjs';
 import { renderMihomo } from './render-mihomo.mjs';
 import { renderSingbox } from './render-singbox.mjs';
 import { emitScripts } from './emit-script.mjs';
@@ -56,9 +56,20 @@ const scripts = await emitScripts({ outDir: join(DIST, 'scripts') });
 console.log(`[4/5] 脚本 ${scripts.length} 个`);
 
 const remoteModules = Object.values(modules).filter((m) => m.kind === 'remote').length;
+// inputs 是上游文本指纹（fetch 层记的 sha256），moduleEntries 是每个模块实际落地多少条
 writeFileSync(
   join(DIST, 'build-info.json'),
-  JSON.stringify({ builtAt: new Date().toISOString(), baseUrl: BASE_URL, counts: { modules: order.length, remoteModules, builtModules: order.length - remoteModules, builtEntries: countEntries(DIST), files: rulesetFiles.length } }, null, 2) + '\n',
+  JSON.stringify(
+    {
+      builtAt: new Date().toISOString(),
+      baseUrl: BASE_URL,
+      counts: { modules: order.length, remoteModules, builtModules: order.length - remoteModules, builtEntries: countEntries(DIST), files: rulesetFiles.length },
+      inputs: fetcher.digests,
+      moduleEntries: countEntriesByModule(DIST),
+    },
+    null,
+    2,
+  ) + '\n',
 );
 
 const result = await validateDist({ distDir: DIST, baseUrl: BASE_URL });

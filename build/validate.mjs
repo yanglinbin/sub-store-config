@@ -9,6 +9,45 @@ const execFileAsync = promisify(execFile);
 
 const TARGET_OF_MIHOMO = { REJECT: 'reject', direct: 'direct', proxies: 'proxies', f1tv: 'f1tv' };
 
+/** url 扩展名 → 必需的 format：客户端按 format 解析内容，配错就是启动期报错或空规则 */
+const SINGBOX_FORMAT_OF_EXT = { '.srs': 'binary', '.json': 'source' };
+const MIHOMO_FORMAT_OF_EXT = { '.list': 'text', '.mrs': 'mrs' };
+
+function extensionOf(url) {
+  if (typeof url !== 'string' || url === '') return '';
+  const path = url.split(/[?#]/)[0];
+  const dot = path.lastIndexOf('.');
+  return dot === -1 ? '' : path.slice(dot).toLowerCase();
+}
+
+function checkSingboxFormats(config) {
+  const problems = [];
+  for (const ruleSet of config.route?.rule_set ?? []) {
+    const ext = extensionOf(ruleSet?.url);
+    const want = SINGBOX_FORMAT_OF_EXT[ext];
+    if (!want) {
+      problems.push(`sing-box rule_set "${ruleSet?.tag}" 的 url 扩展名不支持: ${ruleSet?.url}（只允许 .srs / .json）`);
+      continue;
+    }
+    if (ruleSet.format !== want) {
+      problems.push(`sing-box rule_set "${ruleSet.tag}" 格式不匹配: url 为 ${ext} 时 format 必须是 ${want}，实际 ${ruleSet.format}`);
+    }
+  }
+  return problems;
+}
+
+function checkMihomoFormats(config) {
+  const problems = [];
+  for (const [name, provider] of Object.entries(config['rule-providers'] ?? {})) {
+    const ext = extensionOf(provider?.url);
+    const want = MIHOMO_FORMAT_OF_EXT[ext];
+    if (want && provider.format !== want) {
+      problems.push(`mihomo rule-provider "${name}" 格式不匹配: url 为 ${ext} 时 format 必须是 ${want}，实际 ${provider.format}`);
+    }
+  }
+  return problems;
+}
+
 function diffSequences(mihomoConfig, singboxConfig) {
   const problems = [];
   const a = (mihomoConfig.rules || [])
@@ -57,7 +96,8 @@ async function checkTemplate(file) {
 }
 
 /**
- * 校验 dist：语义 diff（两端规则序列）+ sing-box rule-set 可编译 + 模板可启动。
+ * 校验 dist：语义 diff（两端规则序列）+ rule_set/rule-provider 的 url↔format 一致性
+ * + sing-box rule-set 可编译 + 模板可启动。
  * skipBinaries=true 时跳过 sing-box 相关检查（单测用）。
  */
 export async function validateDist({ distDir = 'dist', baseUrl, skipBinaries = false } = {}) {
@@ -74,7 +114,11 @@ export async function validateDist({ distDir = 'dist', baseUrl, skipBinaries = f
     if (!existsSync(mf)) problems.push(`缺少 ${m}`);
     if (!existsSync(sfile)) problems.push(`缺少 ${sf}`);
     if (existsSync(mf) && existsSync(sfile)) {
-      problems.push(...diffSequences(parse(readFileSync(mf, 'utf8')), JSON.parse(readFileSync(sfile, 'utf8'))));
+      const mihomoConfig = parse(readFileSync(mf, 'utf8'));
+      const singboxConfig = JSON.parse(readFileSync(sfile, 'utf8'));
+      problems.push(...diffSequences(mihomoConfig, singboxConfig));
+      problems.push(...checkSingboxFormats(singboxConfig));
+      problems.push(...checkMihomoFormats(mihomoConfig));
     }
   }
 
