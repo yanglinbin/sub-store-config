@@ -24,14 +24,34 @@ command -v git >/dev/null 2>&1 || die "找不到 git"
 command -v rsync >/dev/null 2>&1 || die "找不到 rsync"
 
 # 1) 取分支：首次 clone，之后强制对齐到远端（dist 只有一个 commit）
-if [ -d "$SRC/.git" ]; then
-    git -C "$SRC" fetch --depth 1 --force origin "$BR" || die "git fetch 失败（网络或仓库地址不对）"
-    git -C "$SRC" reset --hard FETCH_HEAD || die "git reset --hard 失败"
-    git -C "$SRC" clean -fdx || die "git clean -fdx 失败"
-else
-    mkdir -p "$(dirname "$SRC")" || die "创建 $(dirname "$SRC") 失败"
-    git clone -b "$BR" --depth 1 "$REPO" "$SRC" || die "git clone 失败（网络或仓库地址不对）"
-fi
+#    git 走 sing-box 的 tun 出去；tun0 刚重建的几秒内 TCP 会悬着，
+#    lowSpeedTime 让"连不上"在 20 秒内失败，再由外层重试
+GIT="git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20"
+export GIT_TERMINAL_PROMPT=0
+
+fetch_once() {
+    if [ -d "$SRC/.git" ]; then
+        $GIT -C "$SRC" fetch --depth 1 --force origin "$BR" || return 1
+        $GIT -C "$SRC" reset --hard FETCH_HEAD || return 1
+        $GIT -C "$SRC" clean -fdx || return 1
+    else
+        mkdir -p "$(dirname "$SRC")" || return 1
+        $GIT clone -b "$BR" --depth 1 "$REPO" "$SRC" || return 1
+    fi
+    git -C "$SRC" rev-parse --verify -q HEAD >/dev/null
+}
+
+i=0
+while [ "$i" -lt 3 ]; do
+    i=$((i + 1))
+    fetch_once && break
+    if [ "$i" -lt 3 ]; then
+        echo "[WARN] 第 $i 次取 dist 失败（网络/tun 未就绪？），5 秒后重试" >&2
+        sleep 5
+    fi
+done
+[ -d "$SRC/.git" ] && git -C "$SRC" rev-parse --verify -q HEAD >/dev/null \
+    || die "git fetch/clone 连续 3 次失败（网络或仓库地址不对）"
 
 # 2) sanity：宁可让站点停在上一次的内容，也不 rsync 一份残缺产物（--delete 会把旧文件删光）
 [ -f "$SRC/build-info.json" ] || die "$SRC/build-info.json 不存在，dist 分支产物不完整"

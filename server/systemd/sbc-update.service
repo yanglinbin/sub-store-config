@@ -1,8 +1,8 @@
 [Unit]
 Description=从 Sub-Store 拉取最新的 sing-box 配置并重启 sing-box
 Documentation=https://github.com/yanglinbin/sub-store-config/blob/main/server/README.md
-After=network-online.target
-Wants=network-online.target
+After=network-online.target sing-box.service
+Wants=network-online.target sing-box.service
 
 [Service]
 Type=oneshot

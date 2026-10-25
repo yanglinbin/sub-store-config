@@ -24,7 +24,7 @@ fail() {
 }
 
 # 闸 1：下载。--retry 3 让偶发 5xx/超时自愈，-f 让 4xx/5xx 变成非零退出码
-curl -fsS --retry 3 -o "$TMP" "$SUBSTORE_FILE_URL" || fail "下载失败：$SUBSTORE_FILE_URL"
+curl -fsS --retry 3 --connect-timeout 10 --max-time 120 -o "$TMP" "$SUBSTORE_FILE_URL" || fail "下载失败：$SUBSTORE_FILE_URL"
 
 # 闸 2：形状。Sub-Store 出错时会返回 HTML 错误页或 JSON 报错体，先挡住
 head -c 16 "$TMP" | tr -d '[:space:]' | grep -q '^{' || fail "响应不是以 { 开头（Sub-Store 报了 HTML？）"
