@@ -195,7 +195,7 @@ Docker 容器（172.17/172.18/172.19）──► ip rule 判定
 | 文件 | 一行说明 |
 |---|---|
 | `docker-via-tun.sh` | `up`/`down` 幂等开关：容器网段接进 `tun0` + 给发布端口回程打 mark |
-| `sbc-update.sh` | 每天从 Sub-Store 拉配置，四道闸（下载 / 形状 / 节点数≥5 / `sing-box check`）后原子替换并重启，内容没变不重启 |
+| `sbc-update.sh` | 每天从 Sub-Store 拉配置，五道闸（下载 / 形状 / 节点数≥5 / `auto_redirect` 必须存在 / `sing-box check`）后原子替换并重启，内容没变不重启 |
 | `sbc-sync-dist.sh` | 把 `dist` 分支（单 commit、强推）同步到 `/data/nginx/html/sbc` |
 | `install.sh` | 幂等安装：脚本进 `/usr/local/bin`（700）、单元进 `/etc/systemd/system`、`enable --now` |
 | `systemd/` | `docker-via-tun.service` + `sbc-update.{service,timer}`（05:00）+ `sbc-sync-dist.{service,timer}`（04:40，早于更新） |

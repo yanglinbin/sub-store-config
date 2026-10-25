@@ -17,7 +17,7 @@
 |---|---|
 | `docker-via-tun.sh` | **回退方案**（默认关闭）：`up`/`down` 幂等开关，把 3 个 Docker 网段接进 `tun0` 并给发布端口回程打 mark。正常情况用官方 `auto_redirect`，不需要它 |
 | `defaults/sbc-update` | 装到 `/etc/default/sbc-update`：指定订阅源为服务器专用文件（`…/api/file/singbox-server`，带 `redirect=1`） |
-| `sbc-update.sh` | 从 Sub-Store 拉最新的 sing-box 配置，过四道闸（下载 / 形状 / 节点数≥5 / `sing-box check`）后原子替换并重启；内容没变则不重启。订阅源优先级：环境变量 > `/etc/default/sbc-update` > 内置默认 |
+| `sbc-update.sh` | 从 Sub-Store 拉最新的 sing-box 配置，过五道闸（下载 / 形状 / 节点数≥5 / `auto_redirect` 必须存在 / `sing-box check`）后原子替换并重启；内容没变则不重启。订阅源优先级：环境变量 > `/etc/default/sbc-update` > 内置默认 |
 | `sbc-sync-dist.sh` | 把 `dist` 分支（单 commit，强推）同步到 `/data/nginx/html/sbc`，让客户端从本站拉 `.srs`；工作副本在 `/opt/sbc-dist`（可随时删掉重建）；完整性闸口：`.srs` 少于 15 个就 `die`，旧产物原样保留 |
 | `install.sh` | 幂等安装：脚本 → `/usr/local/bin`（700）、单元 → `/etc/systemd/system`、`defaults/sbc-update` → `/etc/default/`、`daemon-reload`、启用 2 个 timer（`docker-via-tun` 保持 disabled） |
 | `systemd/docker-via-tun.service` | 同上，**默认 disabled**；`oneshot` + `RemainAfterExit`，`PartOf=sing-box.service`（重启 sing-box 时连带重跑） |

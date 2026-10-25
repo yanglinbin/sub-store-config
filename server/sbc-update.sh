@@ -43,7 +43,13 @@ grep -q '"route"' "$TMP" || fail "响应里没有 route 字段"
 nodes=$(grep -o '"server_port"' "$TMP" | wc -l)
 [ "$nodes" -ge "$MIN_NODES" ] || fail "节点数只有 $nodes 个（< $MIN_NODES），疑似订阅异常"
 
-# 闸 4：语法。sing-box 自己说能加载才算数（还能顺带挡住端口/字段改错）
+# 闸 4：服务器模式必须带 auto_redirect。不校验的话，订阅源指错成桌面共用文件时，
+# 新配置会静默生效 —— 容器从此不再走代理（且没有任何报错），这正是最难查的故障
+if [ "${REQUIRE_AUTO_REDIRECT:-0}" = 1 ]; then
+    grep -q '"auto_redirect": *true' "$TMP"         || fail "配置里没有 auto_redirect（订阅源应指向 singbox-server 文件，而不是桌面共用的 singbox）"
+fi
+
+# 闸 5：语法。sing-box 自己说能加载才算数（还能顺带挡住端口/字段改错）
 sing-box check -c "$TMP" || fail "sing-box check 未通过"
 
 # 内容没变就别重启：重启会掐断所有连接，没必要

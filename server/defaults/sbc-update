@@ -6,3 +6,7 @@
 #
 # 优先级：环境变量 > 本文件 > sbc-update.sh 里的内置默认（共用文件）
 SUBSTORE_FILE_URL=https://sub-store.yilabao.top/cdc1dc50c1a6799f49c87914ef77def3/api/file/singbox-server
+
+# 拉下来的配置里必须有 auto_redirect，否则拒绝替换（防止订阅源被误改成桌面共用文件后
+# 容器悄悄退回直连）。回退到 ip rule 方案时把它改成 0
+REQUIRE_AUTO_REDIRECT=1
