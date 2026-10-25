@@ -19,7 +19,7 @@ set -u
 SUBNETS="${SUBNETS:-172.17.0.0/16 172.18.0.0/16 172.19.0.0/16}"
 # 私网：容器访问局域网/宿主机服务时不该进 tun，直接走主表
 PRIVATE="${PRIVATE:-10.0.0.0/8 172.16.0.0/12 192.168.0.0/16}"
-# 发布端口回程包的 mark。/mask：只写低 12 位，避免覆盖别人打的 mark
+# 发布端口回程包的 mark。/mask：只写 0x233 命中的那几个位，避免覆盖别人打的 mark
 MARK=0x233
 MARK_MASK="$MARK/$MARK"   # ip rule 里必须带掩码，否则按整 32 位精确匹配
 
@@ -50,6 +50,8 @@ add_rule() {
 # 清掉本脚本可能留下的所有规则（up 的开头与 down 共用）
 flush_rules() {
     del_rule fwmark "$MARK_MASK" lookup main pref "$PRIO_MARK"
+    # 早期版本写的是无掩码形式（掩码 0xffffffff），掩码不同 → 上面那条删不掉，单独清一次
+    del_rule fwmark "$MARK/0xffffffff" lookup main pref "$PRIO_MARK"
     for net in $SUBNETS; do
         del_rule from "$net" lookup "$TUN_TABLE" pref "$PRIO_TO_TUN"
         del_rule from "$net" lookup main pref "$PRIO_FALLBACK"

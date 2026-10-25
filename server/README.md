@@ -17,7 +17,7 @@
 |---|---|
 | `docker-via-tun.sh` | `up`/`down` 幂等开关：把 3 个 Docker 网段的出网流量接进 `tun0`，并给发布端口的回程包打 mark 保持走主表 |
 | `sbc-update.sh` | 从 Sub-Store 拉最新的 sing-box 配置，过四道闸（下载 / 形状 / 节点数≥5 / `sing-box check`）后原子替换并重启；内容没变则不重启 |
-| `sbc-sync-dist.sh` | 把 `dist` 分支（单 commit，强推）同步到 `/data/nginx/html/sbc`，让客户端从本站拉 `.srs` |
+| `sbc-sync-dist.sh` | 把 `dist` 分支（单 commit，强推）同步到 `/data/nginx/html/sbc`，让客户端从本站拉 `.srs`；工作副本在 `/opt/sbc-dist`（可随时删掉重建）；完整性闸口：`.srs` 少于 15 个就 `die`，旧产物原样保留 |
 | `install.sh` | 幂等安装：脚本 → `/usr/local/bin`（700）、单元 → `/etc/systemd/system`、`daemon-reload`、启用 1 个 service + 2 个 timer |
 | `systemd/docker-via-tun.service` | `oneshot` + `RemainAfterExit`；`ExecStart=… up`、`ExecStop=… down`，`After=sing-box.service docker.service`、`Wants=sing-box.service`、`PartOf=sing-box.service`（重启 sing-box 时连带重跑） |
 | `systemd/sbc-update.service` | `oneshot`，跑 `sbc-update.sh` |
@@ -74,6 +74,7 @@ sudo /usr/local/bin/sbc-update.sh
 | 立刻重拉配置 | `sudo systemctl start sbc-update.service`（或 `sudo /usr/local/bin/sbc-update.sh`） |
 | 看重启/同步日志 | `journalctl -u sbc-update -u sbc-sync-dist -n 100` / `journalctl -u sing-box -n 100` |
 | 看定时器下次触发 | `systemctl list-timers 'sbc-*'` |
+| 临时换订阅源/网段/仓库 | `SUBSTORE_FILE_URL=… sbc-update.sh`、`SUBNETS="172.20.0.0/16" docker-via-tun.sh up`、`REPO=… sbc-sync-dist.sh` |
 | 回滚配置 | `sudo install -o root -g sing-box -m 640 /etc/sing-box/config.json.bak.<时间戳> /etc/sing-box/config.json && sudo systemctl restart sing-box` |
 | 备份清单 | `ls -1t /etc/sing-box/config.json.bak.*`（只保留最近 3 份） |
 | 关掉容器分流 | `sudo systemctl stop docker-via-tun.service`（= 执行 `down`） |
