@@ -49,7 +49,7 @@ add_rule() {
 
 # 清掉本脚本可能留下的所有规则（up 的开头与 down 共用）
 flush_rules() {
-    del_rule pref "$PRIO_MARK"
+    del_rule fwmark "$MARK_MASK" lookup main pref "$PRIO_MARK"
     for net in $SUBNETS; do
         del_rule from "$net" lookup "$TUN_TABLE" pref "$PRIO_TO_TUN"
         del_rule from "$net" lookup main pref "$PRIO_FALLBACK"
@@ -86,6 +86,14 @@ up() {
 
     # 4) 守卫：sing-box 没起时 tun0 不存在，此时把容器流量指向 tun 表等于黑洞（容器全断网）。
     #    这种情况改为「容器继续直连」，只保证不断网，等 sing-box 起来后重跑本脚本。
+    # 开机时 After=sing-box 只保证"已启动"，tun0 往往还要几百毫秒才建好：等最多 10 秒
+    i=0
+    while [ "$i" -lt 20 ]; do
+        ip link show "$TUN" >/dev/null 2>&1 && [ -n "$(ip route show table "$TUN_TABLE" 2>/dev/null)" ] && break
+        i=$((i + 1))
+        sleep 0.5
+    done
+
     if ip link show "$TUN" >/dev/null 2>&1 && [ -n "$(ip route show table "$TUN_TABLE" 2>/dev/null)" ]; then
         for net in $SUBNETS; do
             add_rule from "$net" lookup "$TUN_TABLE" pref "$PRIO_TO_TUN"
@@ -96,7 +104,7 @@ up() {
             add_rule from "$net" lookup main pref "$PRIO_FALLBACK"
         done
         echo "[WARN] 找不到 $TUN 或表 $TUN_TABLE 没有路由（sing-box 未启动？）：本次只保证容器不断网，流量仍走主表直连。" >&2
-        echo "[WARN] sing-box 起来后重跑：$0 up" >&2
+        echo "[WARN] sing-box 起来后重跑：systemctl restart docker-via-tun.service" >&2
     fi
 }
 

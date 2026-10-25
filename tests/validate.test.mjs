@@ -10,7 +10,11 @@ import { validateDist } from '../build/validate.mjs';
  * 造一份最小 dist。两份模板都要有 rule_set / rule-providers，
  * 否则 url↔format 一致性校验在单测里跑不到。
  */
-function makeDist(mihomoRules, singboxRules, { ruleProviderFormat = 'text', ruleSetFormat = 'binary' } = {}) {
+function makeDist(
+  mihomoRules,
+  singboxRules,
+  { ruleProviderFormat = 'text', ruleSetFormat = 'binary', ruleProviderUrl = 'https://x/a.list' } = {},
+) {
   const d = mkdtempSync(join(tmpdir(), 'ssc-v-'));
   mkdirSync(join(d, 'mihomo'), { recursive: true });
   mkdirSync(join(d, 'singbox/rules'), { recursive: true });
@@ -21,7 +25,7 @@ function makeDist(mihomoRules, singboxRules, { ruleProviderFormat = 'text', rule
         rules: mihomoRules,
         'proxy-groups': [],
         'rule-providers': {
-          a: { type: 'http', behavior: 'domain', format: ruleProviderFormat, url: 'https://x/a.list' },
+          a: { type: 'http', behavior: 'domain', format: ruleProviderFormat, url: ruleProviderUrl },
         },
       }),
     );
@@ -33,7 +37,15 @@ function makeDist(mihomoRules, singboxRules, { ruleProviderFormat = 'text', rule
         outbounds: [],
         dns: {},
         route: {
-          rule_set: [{ type: 'remote', tag: 'a', format: ruleSetFormat, url: 'https://x/a.srs' }],
+          // ruleSetFormat 传 null 表示省略 format（sing-box 会按扩展名推断，合法）
+          rule_set: [
+            {
+              type: 'remote',
+              tag: 'a',
+              ...(ruleSetFormat === null ? {} : { format: ruleSetFormat }),
+              url: 'https://x/a.srs',
+            },
+          ],
           rules: singboxRules,
         },
       }),
@@ -73,4 +85,19 @@ test('url 与 format 完全配套时通过', async () => {
   });
   const r = await validateDist({ distDir: d, baseUrl: 'x', skipBinaries: true });
   assert.equal(r.ok, true);
+});
+
+test('sing-box 省略 format（按扩展名推断）是合法的，不误报', async () => {
+  const d = makeDist(['RULE-SET,a,REJECT'], [{ rule_set: 'a', action: 'reject' }], { ruleSetFormat: null });
+  const r = await validateDist({ distDir: d, baseUrl: 'x', skipBinaries: true });
+  assert.equal(r.ok, true, r.problems.join('; '));
+});
+
+test('mihomo rule-provider 用了不支持的扩展名时报错', async () => {
+  const d = makeDist(['RULE-SET,a,REJECT'], [{ rule_set: 'a', action: 'reject' }], {
+    ruleProviderUrl: 'https://x/a.yaml', // 只支持 .list / .mrs
+  });
+  const r = await validateDist({ distDir: d, baseUrl: 'x', skipBinaries: true });
+  assert.equal(r.ok, false);
+  assert.ok(r.problems.some((p) => p.includes('扩展名不支持')));
 });

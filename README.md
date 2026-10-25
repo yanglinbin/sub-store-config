@@ -12,7 +12,7 @@
 
 ---
 
-## 规则集（15 个模块）
+## 规则集（17 个模块）
 
 | # | 模块 | 来源 | 类型 | → 组 |
 |---|---|---|---|---|
@@ -85,7 +85,7 @@ sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 | `mihomo/config-proxy.yaml` / `singbox/template-proxy.json` | 经 `proxies` 组 | 直连 CDN 不通、节点确认可用 |
 
 > 经代理下载的已知风险：sing-box 启动时 urltest 还没测速，会先用第一个成员；
-> 若那一个节点是死的，15 个 rule-set 全部失败 → `FATAL`。用这个变体前请确认节点可用。
+> 若那一个节点是死的，17 个 rule-set 全部失败 → `FATAL`。用这个变体前请确认节点可用。
 
 ## 策略组
 
@@ -208,7 +208,7 @@ sudo /usr/local/bin/sbc-update.sh
 | 看日志 | `journalctl -u sbc-update -u sbc-sync-dist -n 100` |
 | 看下次触发 | `systemctl list-timers 'sbc-*'` |
 | 回滚配置 | `sudo install -o root -g sing-box -m 640 /etc/sing-box/config.json.bak.<时间戳> /etc/sing-box/config.json && sudo systemctl restart sing-box` |
-| 关/开容器分流 | `sudo systemctl stop docker-via-tun.service`（`start` 恢复） |
+| 关/开容器分流 | `sudo systemctl stop docker-via-tun.service`（`restart` 恢复；`start` 对已 active 的 oneshot 是空操作） |
 
 配置备份只保留最近 3 份，`ls -1t /etc/sing-box/config.json.bak.*` 可查。
 

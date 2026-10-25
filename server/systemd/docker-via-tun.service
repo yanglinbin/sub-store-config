@@ -1,4 +1,6 @@
 [Unit]
+# restart sing-box 时连带重跑：否则容器分流会停在旧状态（tun0 换了 ip/表被重建）
+PartOf=sing-box.service
 Description=把 Docker 容器流量接入 sing-box TUN（ip rule + conntrack mark）
 Documentation=https://github.com/yanglinbin/sub-store-config/blob/main/server/README.md
 # tun0 由 sing-box 创建，Docker 的网段要先存在，iptables 才有 PREROUTING 可挂

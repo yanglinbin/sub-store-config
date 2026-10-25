@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -40,7 +40,15 @@ export function createFetcher({
         const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
         if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
         const text = await res.text();
-        writeFileSync(file, text);
+        // 缓存写入失败（磁盘满/只读）不能连累本次构建，更不能留下半截文件被下次当真：
+        // 先写临时文件再 rename，失败只告警
+        try {
+          const tmp = `${file}.tmp`;
+          writeFileSync(tmp, text);
+          renameSync(tmp, file);
+        } catch (cacheErr) {
+          onWarn(url, cacheErr);
+        }
         return remember(url, text);
       } catch (err) {
         if (existsSync(file)) {

@@ -27,13 +27,14 @@ fail() {
 curl -fsS --retry 3 -o "$TMP" "$SUBSTORE_FILE_URL" || fail "下载失败：$SUBSTORE_FILE_URL"
 
 # 闸 2：形状。Sub-Store 出错时会返回 HTML 错误页或 JSON 报错体，先挡住
-head -c 1 "$TMP" | grep -q '{' || fail "响应不是以 { 开头（Sub-Store 报了 HTML？）"
+head -c 16 "$TMP" | tr -d '[:space:]' | grep -q '^{' || fail "响应不是以 { 开头（Sub-Store 报了 HTML？）"
 grep -q '"outbounds"' "$TMP" || fail "响应里没有 outbounds 字段"
 grep -q '"route"' "$TMP" || fail "响应里没有 route 字段"
 
 # 闸 3：节点数。注意只能数 server_port：rule_set 里也有 "type": "remote"，
 # 旧版用 grep -c '"type": "remote"' 会把它当成节点，节点全掉光也照样替换
-nodes=$(grep -c '"server_port"' "$TMP")
+# 用 grep -o + wc -l 数"出现次数"：grep -c 数的是行数，紧凑 JSON 会永远得到 1
+nodes=$(grep -o '"server_port"' "$TMP" | wc -l)
 [ "$nodes" -ge "$MIN_NODES" ] || fail "节点数只有 $nodes 个（< $MIN_NODES），疑似订阅异常"
 
 # 闸 4：语法。sing-box 自己说能加载才算数（还能顺带挡住端口/字段改错）
@@ -59,6 +60,13 @@ install -o root -g sing-box -m 640 "$TMP" "$CFG" || fail "写入 $CFG 失败"
 
 restart_or_rollback() {
     systemctl restart sing-box 2>/dev/null
+    # Type=simple 的 restart 在 fork 后就返回，进程可能在几百毫秒后才退出，采样一次会漏判
+    i=0
+    while [ "$i" -lt 10 ]; do
+        sleep 1
+        i=$((i + 1))
+        systemctl is-active --quiet sing-box || break
+    done
     systemctl is-active --quiet sing-box && return 0
     # 起不来就回滚到上一份，避免整机因为一份坏配置长时间断网
     prev=$(ls -1t "$BAK_GLOB".* 2>/dev/null | head -1)
@@ -66,6 +74,12 @@ restart_or_rollback() {
     echo "[WARN] 新配置起不来，回滚到 $prev" >&2
     install -o root -g sing-box -m 640 "$prev" "$CFG" || fail "回滚写入 $CFG 失败"
     systemctl restart sing-box 2>/dev/null
+    i=0
+    while [ "$i" -lt 10 ]; do
+        sleep 1
+        i=$((i + 1))
+        systemctl is-active --quiet sing-box && break
+    done
     systemctl is-active --quiet sing-box         || fail "回滚后仍起不来，需要人工介入（journalctl -u sing-box -n 100）"
     fail "新配置导致 sing-box 无法启动，已自动回滚到 $prev"
 }

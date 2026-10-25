@@ -29,7 +29,8 @@ function checkSingboxFormats(config) {
       problems.push(`sing-box rule_set "${ruleSet?.tag}" 的 url 扩展名不支持: ${ruleSet?.url}（只允许 .srs / .json）`);
       continue;
     }
-    if (ruleSet.format !== want) {
+    // sing-box 允许省略 format（按 url 扩展名推断），所以只在显式给出时比对
+    if (ruleSet.format !== undefined && ruleSet.format !== want) {
       problems.push(`sing-box rule_set "${ruleSet.tag}" 格式不匹配: url 为 ${ext} 时 format 必须是 ${want}，实际 ${ruleSet.format}`);
     }
   }
@@ -41,7 +42,11 @@ function checkMihomoFormats(config) {
   for (const [name, provider] of Object.entries(config['rule-providers'] ?? {})) {
     const ext = extensionOf(provider?.url);
     const want = MIHOMO_FORMAT_OF_EXT[ext];
-    if (want && provider.format !== want) {
+    if (!want) {
+      problems.push(`mihomo rule-provider "${name}" 的 url 扩展名不支持: ${provider?.url}（只允许 .list / .mrs）`);
+      continue;
+    }
+    if (provider.format !== want) {
       problems.push(`mihomo rule-provider "${name}" 格式不匹配: url 为 ${ext} 时 format 必须是 ${want}，实际 ${provider.format}`);
     }
   }

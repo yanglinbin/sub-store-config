@@ -13,7 +13,7 @@ REPO="${REPO:-https://github.com/yanglinbin/sub-store-config.git}"
 BR=dist
 SRC=/opt/sbc-dist
 DEST=/data/nginx/html/sbc
-MIN_SRS=10   # 规则集模块共 15 个（含自建），少于 10 个说明构建/拉取出了问题
+MIN_SRS=15   # 规则集模块共 17 个，少于 15 个说明构建/拉取出了问题
 
 die() {
     echo "[FAIL] $*" >&2

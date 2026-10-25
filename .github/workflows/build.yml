@@ -88,6 +88,9 @@ jobs:
           git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dist
 
       - name: 远端 rule-set 下载冒烟（发布后）
+        # 用自托管基址（vars.RULES_BASE_URL）时，这些文件要等服务器 sbc-sync-dist.timer 同步后才有，
+        # 此刻必然 404；该场景由服务器侧 sbc-sync-dist.sh 的 sanity 检查负责
+        if: ${{ vars.RULES_BASE_URL == '' }}
         continue-on-error: true   # jsDelivr 分支缓存可能还没刷新，失败不阻塞发布
         env:
           PROBE_REMOTE: '1'
