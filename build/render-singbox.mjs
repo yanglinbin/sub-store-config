@@ -6,16 +6,7 @@ import { geoipSrs } from './upstream.mjs';
 const TPL = 'templates/singbox.json.tpl';
 
 /** 只做模板替换与自检；策略组由 Sub-Store 脚本在运行时重建。 */
-export function renderSingbox({
-  regions,
-  order,
-  modules,
-  baseUrl,
-  rootDir = process.cwd(),
-  format = 'binary',
-  ext = 'srs',
-  ruleDownload = 'direct',
-}) {
+export function renderSingbox({ regions, order, modules, baseUrl, rootDir = process.cwd(), format = 'binary', ext = 'srs' }) {
   const tpl = readFileSync(resolve(rootDir, TPL), 'utf8');
 
   const ruleSet = order.map(({ module }) => {
@@ -61,9 +52,7 @@ export function renderSingbox({
 
   const body = tpl
     .replace('{{RULE_SET}}', JSON.stringify(ruleSet))
-    .replace('{{RULES}}', JSON.stringify(rules))
-    // 规则集下载是否经代理：直连(默认，安全) / 经 proxies(代理挂了会 FATAL)
-    .replace('{{DOWNLOAD_DETOUR}}', ruleDownload === 'proxy' ? ', "detour": "proxies"' : '');
+    .replace('{{RULES}}', JSON.stringify(rules));
 
   let config;
   try {

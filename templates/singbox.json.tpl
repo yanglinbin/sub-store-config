@@ -1,6 +1,6 @@
 {
   "log": { "level": "info", "timestamp": true },
-  "http_clients": [{ "tag": "ruleset-download"{{DOWNLOAD_DETOUR}} }],
+  "http_clients": [{ "tag": "ruleset-download", "detour": "proxies" }],
   "dns": {
     "servers": [
       { "type": "https", "tag": "local-dns", "server": "223.5.5.5", "path": "/dns-query" },

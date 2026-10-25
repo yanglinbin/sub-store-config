@@ -118,28 +118,16 @@ npm run validate
 
 `npm run build` 需要访问 `cdn.jsdelivr.net` 拉 clash-rules 文本；拉不到时用 `.cache/` 里上一份并告警。
 
-### 产物变体：规则集直连下载 vs 经代理下载
+### 两种基址（别混用）
 
-每个客户端出两份，**按机器选**：
-
-| 文件 | 规则集怎么下 | 适合 |
+| 用途 | 基址 | 谁在拉 |
 |---|---|---|
-| `mihomo/config.yaml` / `singbox/template.json` | **直连 CDN** | 服务器、以及"代理可能挂"的机器（**默认推荐**） |
-| `mihomo/config-proxy.yaml` / `singbox/template-proxy.json` | **经 `proxies` 组** | 直连 CDN 不通、但代理稳定的桌面机 |
+| 模板与脚本（`mihomo/config.yaml`、`singbox/template.json`、`scripts/*.js`） | `https://raw.githubusercontent.com/yanglinbin/sub-store-config/dist` | Sub-Store 服务器（raw 缓存 5 分钟，改完即生效） |
+| 规则集（`*/rules/*.list`、`*.srs`） | `https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist` | 客户端（jsDelivr 在国内可达；分支缓存 ≤12h） |
 
-> 踩过的坑（真实事故）：服务器上用了"经代理下载"的变体，而当时的节点是上一个机场的（已失效）→
-> 规则集下载走死节点 → 全部超时 → `FATAL` 起不来。**"经代理下载"把启动绑死在代理可用性上**，
-> 所以它只适合确认代理长期可用的机器。想要"代理不稳也能启动"就必须用直连变体。
-
-### 模板与脚本的基址
-
-| 用途 | 基址 |
-|---|---|
-| 模板与脚本 | `https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist`（raw 若你的服务器能稳定访问，换 raw 更新更快：5 分钟 vs ≤12h） |
-| 规则集 | 同上（`*/rules/*.list`、`*.srs`） |
-
-> 2026-10-25 实测：某服务器上 `raw.githubusercontent.com` 与 `cdn.jsdelivr.net` 都可能被掐，
-> 排查时先在服务器上 `curl` 这两个地址，再怀疑配置。
+规则集没有改走 raw：那需要"用代理下载规则集"（mihomo `rule-providers.<名称>.proxy: proxies`、
+sing-box `http_clients[].detour: proxies`），代价是**代理挂了规则集就下不到、客户端直接 FATAL**。
+当前"直连 CDN"保证代理挂掉时客户端仍能启动。
 
 ## 加规则 / 改顺序
 

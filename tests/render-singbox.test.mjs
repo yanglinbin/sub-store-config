@@ -76,13 +76,10 @@ test('模板里的 selector 都带 interrupt_exist_connections', () => {
   assert.ok(selectors.every((s) => s.interrupt_exist_connections === true));
 });
 
-test('规则集下载：默认直连，proxy 变体走 proxies', () => {
-  const plain = render();
-  assert.equal(plain.http_clients[0].tag, 'ruleset-download');
-  assert.equal('detour' in plain.http_clients[0], false, '默认直连，代理挂了也能启动');
-  assert.equal(plain.route.default_http_client, 'ruleset-download');
-
-  const viaProxy = JSON.parse(renderSingbox({ ...loadAll(), baseUrl: BASE, ruleDownload: 'proxy' }));
-  assert.equal(viaProxy.http_clients[0].detour, 'proxies');
-  assert.equal(viaProxy.route.default_http_client, 'ruleset-download');
+test('规则集下载走 proxies 代理组（不再 detour 到空 direct）', () => {
+  const c = render();
+  const client = c.http_clients[0];
+  assert.equal(client.tag, 'ruleset-download');
+  assert.equal(client.detour, 'proxies', '代理组名，而不是 DIRECT');
+  assert.equal(c.route.default_http_client, 'ruleset-download');
 });

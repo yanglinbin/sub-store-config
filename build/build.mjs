@@ -33,27 +33,19 @@ if (srsOk) {
 }
 console.log(`[2/5] 规则集编译为 .srs: ${srsOk ? '是' : '否（退化为 source json）'}`);
 
-// 每个客户端出两份：规则集「直连下载」（默认，安全）与「经代理下载」（代理挂了会 FATAL）
-for (const ruleDownload of ['direct', 'proxy']) {
-  const suffix = ruleDownload === 'proxy' ? '-proxy' : '';
-  writeFileSync(
-    join(DIST, `mihomo/config${suffix}.yaml`),
-    renderMihomo({ regions, order, modules, baseUrl: BASE_URL, ruleDownload }),
-  );
-  writeFileSync(
-    join(DIST, `singbox/template${suffix}.json`),
-    renderSingbox({
-      regions,
-      order,
-      modules,
-      baseUrl: BASE_URL,
-      format: srsOk ? 'binary' : 'source',
-      ext: srsOk ? 'srs' : 'json',
-      ruleDownload,
-    }),
-  );
-}
-console.log('[3/5] 两端模板已渲染（直连 / 经代理 各一份）');
+writeFileSync(join(DIST, 'mihomo/config.yaml'), renderMihomo({ regions, order, modules, baseUrl: BASE_URL }));
+writeFileSync(
+  join(DIST, 'singbox/template.json'),
+  renderSingbox({
+    regions,
+    order,
+    modules,
+    baseUrl: BASE_URL,
+    format: srsOk ? 'binary' : 'source',
+    ext: srsOk ? 'srs' : 'json',
+  }),
+);
+console.log('[3/5] 两端模板已渲染');
 
 const scripts = await emitScripts({ outDir: join(DIST, 'scripts') });
 console.log(`[4/5] 脚本 ${scripts.length} 个`);
