@@ -24,6 +24,7 @@ test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格�
     type: 'http',
     behavior: 'domain',
     format: 'text',
+    proxy: 'proxies',
     url: `${BASE}/mihomo/rules/category-ads-all.list`,
     path: './ruleset/category-ads-all.yaml',
     interval: 86400,

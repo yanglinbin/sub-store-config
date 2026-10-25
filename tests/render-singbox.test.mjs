@@ -51,7 +51,7 @@ test('route 规则与 order 一致（reject 用 action=reject）', () => {
 
 test('1.14 约束：显式 http client、无 independent_cache、无 AAAA reject', () => {
   const c = render();
-  assert.equal(c.route.default_http_client, 'direct-download');
+  assert.equal(c.route.default_http_client, 'ruleset-download');
   assert.ok(Array.isArray(c.http_clients) && c.http_clients.length === 1);
   assert.ok(!('independent_cache' in c.dns));
   assert.ok(!JSON.stringify(c.dns.rules).includes('"reject"'));
@@ -76,13 +76,10 @@ test('模板里的 selector 都带 interrupt_exist_connections', () => {
   assert.ok(selectors.every((s) => s.interrupt_exist_connections === true));
 });
 
-test('http_clients 不能 detour 到空 direct outbound（运行时才会报错）', () => {
+test('规则集下载走 proxies 代理组（不再 detour 到空 direct）', () => {
   const c = render();
   const client = c.http_clients[0];
-  assert.equal(client.tag, 'direct-download');
-  assert.equal(
-    'detour' in client,
-    false,
-    'sing-box 会报 "detour to an empty direct outbound makes no sense"，应省略 detour',
-  );
+  assert.equal(client.tag, 'ruleset-download');
+  assert.equal(client.detour, 'proxies', '代理组名，而不是 DIRECT');
+  assert.equal(c.route.default_http_client, 'ruleset-download');
 });

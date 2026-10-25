@@ -1,6 +1,6 @@
 {
   "log": { "level": "info", "timestamp": true },
-  "http_clients": [{ "tag": "direct-download" }],
+  "http_clients": [{ "tag": "ruleset-download", "detour": "proxies" }],
   "dns": {
     "servers": [
       { "type": "https", "tag": "local-dns", "server": "223.5.5.5", "path": "/dns-query" },
@@ -36,7 +36,7 @@
   ],
   "route": {
     "auto_detect_interface": true,
-    "default_http_client": "direct-download",
+    "default_http_client": "ruleset-download",
     "default_domain_resolver": "local-dns",
     "final": "final",
     "rule_set": {{RULE_SET}},
