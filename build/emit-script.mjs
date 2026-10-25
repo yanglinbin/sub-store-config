@@ -23,19 +23,9 @@ export async function emitScripts({ regionsPath = 'config/regions.yaml', outDir,
 
   const written = [];
 
-  // 节点清理脚本：排除正则来自 config/node-filter.yaml
+  // 地区组排除正则（「下载专用」这类低倍率节点不进 url-test 组，但仍留在 proxies 里可手选）
   const filterCfg = parse(readFileSync(resolve(rootDir, 'config/node-filter.yaml'), 'utf8'));
-  const excludeRegex = filterCfg.exclude_regex;
-  if (typeof excludeRegex !== 'string' || excludeRegex === '') {
-    throw new Error('config/node-filter.yaml 缺少 exclude_regex');
-  }
   const regionExclude = filterCfg.region_exclude_regex || '';
-  const nodesTpl = readFileSync(resolve(rootDir, 'templates/script-nodes.js.tpl'), 'utf8');
-  writeFileSync(
-    join(dir, 'nodes.js'),
-    nodesTpl.replace('__EXCLUDE_REGEX__', () => `new RegExp(${JSON.stringify(excludeRegex)})`),
-  );
-  written.push('scripts/nodes.js');
 
   for (const name of ['singbox', 'mihomo']) {
     const tpl = readFileSync(resolve(rootDir, `templates/script-${name}.js.tpl`), 'utf8');

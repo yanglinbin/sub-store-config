@@ -111,20 +111,14 @@ export async function validateDist({ distDir = 'dist', baseUrl, skipBinaries = f
   const mihomoFile = join(dir, 'mihomo/config.yaml');
   const singboxFile = join(dir, 'singbox/template.json');
 
-  for (const [m, sf] of [
-    ['mihomo/config.yaml', 'singbox/template.json'],
-    ['mihomo/config-proxy.yaml', 'singbox/template-proxy.json'],
-  ]) {
-    const mf = join(dir, m), sfile = join(dir, sf);
-    if (!existsSync(mf)) problems.push(`缺少 ${m}`);
-    if (!existsSync(sfile)) problems.push(`缺少 ${sf}`);
-    if (existsSync(mf) && existsSync(sfile)) {
-      const mihomoConfig = parse(readFileSync(mf, 'utf8'));
-      const singboxConfig = JSON.parse(readFileSync(sfile, 'utf8'));
-      problems.push(...diffSequences(mihomoConfig, singboxConfig));
-      problems.push(...checkSingboxFormats(singboxConfig));
-      problems.push(...checkMihomoFormats(mihomoConfig));
-    }
+  if (!existsSync(mihomoFile)) problems.push('缺少 mihomo/config.yaml');
+  if (!existsSync(singboxFile)) problems.push('缺少 singbox/template.json');
+  if (existsSync(mihomoFile) && existsSync(singboxFile)) {
+    const mihomoConfig = parse(readFileSync(mihomoFile, 'utf8'));
+    const singboxConfig = JSON.parse(readFileSync(singboxFile, 'utf8'));
+    problems.push(...diffSequences(mihomoConfig, singboxConfig));
+    problems.push(...checkSingboxFormats(singboxConfig));
+    problems.push(...checkMihomoFormats(mihomoConfig));
   }
 
   if (!skipBinaries) {

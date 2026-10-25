@@ -8,8 +8,7 @@ const TPL = 'templates/mihomo.yaml.tpl';
 const TARGET_NAME = { reject: 'REJECT', direct: 'direct', proxies: 'proxies', f1tv: 'f1tv' };
 
 /** 渲染 mihomo 完整配置：模板固定字段 + order 派生的 rule-providers / rules + 兜底组。 */
-export function renderMihomo({ regions, order, modules, baseUrl, rootDir = process.cwd(), ruleDownload = 'direct' }) {
-  const proxyField = ruleDownload === 'proxy' ? { proxy: 'proxies' } : {};
+export function renderMihomo({ regions, order, modules, baseUrl, rootDir = process.cwd() }) {
   const tpl = readFileSync(resolve(rootDir, TPL), 'utf8');
 
   const ruleProviders = {};
@@ -21,7 +20,6 @@ export function renderMihomo({ regions, order, modules, baseUrl, rootDir = proce
         type: 'http',
         behavior: mod.behavior,
         format: 'mrs',
-        ...proxyField,
         url: geoipMrs(mod.category),
         path: `./mrs/geoip/${mod.category}.mrs`,
         interval: 86400,
@@ -32,7 +30,6 @@ export function renderMihomo({ regions, order, modules, baseUrl, rootDir = proce
       type: 'http',
       behavior: mod.behavior,
       format: 'text',
-      ...proxyField,
       url: `${baseUrl}/mihomo/rules/${module}.list`,
       path: `./ruleset/${module}.yaml`,
       interval: 86400,

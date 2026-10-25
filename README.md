@@ -75,8 +75,7 @@ table inet sing-box  +  ip mangle       ← ct status dnat → mark 0x233（端�
 | `singbox-server` | `…#name=default&noCache=true&redirect=1` | 服务器（`/etc/default/sbc-update` 指过去） |
 | `singbox` | `…#name=default&noCache=true` | Windows / 桌面 |
 
-回退路径：内核 nft 不可用时改用 `server/docker-via-tun.sh`（`ip rule` 90/98/100 + DNAT mark），
-并把订阅源换回 `singbox` 文件（不带 `auto_redirect`）。**两条路是等价手段，不要同时开。**
+这是**唯一方案**：早期手写的 `ip rule` + `conntrack mark` 脚本已删除（需要时见 git 历史）。
 
 ### 三个常见"优化"建议的实测结论
 
@@ -86,18 +85,8 @@ table inet sing-box  +  ip mangle       ← ct status dnat → mark 0x233（端�
 | `resolve` 全局改成只作用于 `rule_set: [cncidr, telegramcidr]` | **采纳意图，改用更正确的做法** | 给 `resolve` 加 `rule_set` 是无效的：`ip_cidr` 规则集在"还不知道目标 IP"时无法匹配，会永不触发。正确做法是把 **所有域名规则前置**，`resolve` 自然只对剩余连接生效（已在 `order.yaml` 落地） |
 | `strict_route: true` 在 Windows 会挡局域网 | **证据不足，保留 true** | 1.14 文档里 Windows 下 `strict_route` 只声明三件事：不支持的网络不可达、阻止多网卡 DNS 泄露、非 TUN 接口的 53 端口被封；**没有**"挡局域网"的描述。如果你实测访问 NAS/打印机异常，把模板里 `strict_route` 改 `false` 即可 |
 
-## 产物变体：规则集直连下载 vs 经代理下载
-
-| 文件 | 规则集怎么下 | 适合 |
-|---|---|---|
-| `mihomo/config.yaml` / `singbox/template.json` | 直连 CDN | 默认；代理挂了也能启动 |
-| `mihomo/config-proxy.yaml` / `singbox/template-proxy.json` | 经 `proxies` 组 | 直连 CDN 不通、节点确认可用 |
-
-> 经代理下载的已知风险：sing-box 启动时 urltest 还没测速，会先用第一个成员；
-> 若那一个节点是死的，17 个 rule-set 全部失败 → `FATAL`。用这个变体前请确认节点可用。
-
-**规则集改为自托管之后（`RULES_BASE_URL` 指向自己域名），两个变体下载的都是同一台机器，
-服务器侧已切回直连变体（`singbox/template.json`）——启动不再依赖节点可用性。**
+> 规则集自托管在自己域名下（`RULES_BASE_URL`），只有 `config.yaml` / `template.json` 一份产物，
+> 不再有「经代理下载」的变体 —— 启动不依赖节点是否可用。
 
 ## 策略组
 
@@ -133,11 +122,11 @@ table inet sing-box  +  ip mangle       ← ct status dnat → mark 0x233（端�
 
 ```
 config/regions.yaml     地区关键词表（组名/旗帜/关键词）—— 唯一真相
-config/node-filter.yaml 信息节点排除正则（Sub-Store「正则筛选」用同一份）
+config/node-filter.yaml 地区组排除正则（信息节点过滤在 Sub-Store 里配）
 rules/modules.yaml      模块定义：上游 / 自定义 / behavior
 rules/order.yaml        规则顺序 + 目标组 —— 唯一真相
 rules/custom/*.yaml     自建清单：airport google microsoft steam f1tv
-templates/*.tpl         两端配置模板 + 3 个 Sub-Store 脚本模板
+templates/*.tpl         两端配置模板 + 2 个 Sub-Store 脚本模板（mihomo.js / singbox.js）
 lib/grouping.mjs        纯函数：地区识别 + 四个组成员（两端共享）
 build/*.mjs             抓取 / 解析 / 构建规则集 / 渲染 / 校验 / 冒烟
 server/                 服务器运维资产：容器分流 / 拉配置 / 同步静态站点 / systemd 单元
@@ -177,28 +166,25 @@ sing-box `http_clients[].detour: proxies`），代价是**代理挂了规则集�
 ### 流量分层：宿主机 vs 容器
 
 ```
-宿主机进程（curl / 客户端）──► 主表 default → tun0 ──► sing-box ──► 节点
-                                        ▲
-                            ip rule prio 100 → 表 2022
-                                        │
-Docker 容器（172.17/172.18/172.19）──► ip rule 判定
-    ├─ prio 90  有 conntrack mark（DNAT 回程）→ 主表 → eth0   外部访问容器的回包
-    ├─ prio 98  to 私网（10/8、172.16/12、192.168/16）→ 主表    容器访问局域网
-    └─ prio 100 其余 → 表 2022 → tun0 → sing-box               容器出网走代理
+                     ┌───────────────────────────────────────────────────────┐
+  宿主机进程           │  nft: inet sing-box 打 mark ─┐                         │
+  Docker 容器          │  出网在 PREROUTING 即被接管 ─┤→ ip rule 9000+ → 表 2022 │──► tun0 ──► 节点
+                     │  （按 mark，不看网段）        ┘                         │
+                     │                                                       │
+  外部访问容器端口      │  nft: ct status dnat → mark → 命中 local 表            │──► eth0 直出
+                     └───────────────────────────────────────────────────────┘
 ```
 
-数字越小越先匹配。表 `2022` 由 tun 的 `auto_route` 维护；`tun0` 不存在时脚本不加 prio 100，
-改为 prio 8000（`lookup main` = 不接管）并告警 —— 容器只是「暂时不代理」，不会断网。
+`ip rule` 由 sing-box 自己维护（`9000/9001/9002/32768`），新增 Docker 网段不需要改任何东西。
 
 ### `server/` 里有什么
 
 | 文件 | 一行说明 |
 |---|---|
-| `docker-via-tun.sh` | `up`/`down` 幂等开关：容器网段接进 `tun0` + 给发布端口回程打 mark |
 | `sbc-update.sh` | 每天从 Sub-Store 拉配置，五道闸（下载 / 形状 / 节点数≥5 / `auto_redirect` 必须存在 / `sing-box check`）后原子替换并重启，内容没变不重启 |
 | `sbc-sync-dist.sh` | 把 `dist` 分支（单 commit、强推）同步到 `/data/nginx/html/sbc` |
 | `install.sh` | 幂等安装：脚本进 `/usr/local/bin`（700）、单元进 `/etc/systemd/system`、`enable --now` |
-| `systemd/` | `docker-via-tun.service` + `sbc-update.{service,timer}`（05:00）+ `sbc-sync-dist.{service,timer}`（04:40，早于更新） |
+| `systemd/` | `sbc-update.{service,timer}`（05:00）+ `sbc-sync-dist.{service,timer}`（04:40，早于更新）+ `defaults/`（订阅源） |
 | `nginx/sbc-static.conf` | `location /sbc/` 片段，贴进 `sub-store.yilabao.top` 的 443 server 块 |
 
 ### 安装三步
@@ -220,7 +206,6 @@ sudo /usr/local/bin/sbc-update.sh
 | 看日志 | `journalctl -u sbc-update -u sbc-sync-dist -n 100` |
 | 看下次触发 | `systemctl list-timers 'sbc-*'` |
 | 回滚配置 | `sudo install -o root -g sing-box -m 640 /etc/sing-box/config.json.bak.<时间戳> /etc/sing-box/config.json && sudo systemctl restart sing-box` |
-| 关/开容器分流 | `sudo systemctl stop docker-via-tun.service`（`restart` 恢复；`start` 对已 active 的 oneshot 是空操作） |
 
 配置备份只保留最近 3 份，`ls -1t /etc/sing-box/config.json.bak.*` 可查。
 
@@ -233,15 +218,14 @@ sudo /usr/local/bin/sbc-update.sh
 - 站点挂掉客户端仍能起：`.srs` 有 `cache_file` / `interval: 86400` 本地缓存；
   实在不行把 `RULES_BASE_URL` 改回 `https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist` 重跑 CI。
 - Sub-Store 里两个文件（`clash` / `singbox`）的**模板 URL 与脚本 URL 也都指向自己域名**，
-  `singbox` 用直连变体 `template.json`、`clash` 用 `mihomo/config.yaml`：规则集就在本机 nginx，
-  直连即可，不需要再绕代理；`template-proxy.json` / `config-proxy.yaml` 只在「客户端连不上自己域名」时当备选。
+  `singbox` 用 `template.json`、`clash` 用 `mihomo/config.yaml`：规则集就在本机 nginx，直连即可。
 
 ### 故障模式
 
 | 症状 | 原因 | 处理 |
 |---|---|---|
 | 域名解析成 `198.18.x` 却打不开网页 | **fakeip 必须配 tun**：只有 `mixed-in` 没有设备承载 fakeip 地址 | 保留 tun 入站；或不用 fakeip |
-| 外部访问容器发布端口连上就断 | **容器进 tun 必须带 DNAT mark**：回程包被 prio 100 拉进 tun，从节点出口回去 | 确认 `iptables -t mangle -S PREROUTING` 有 `ctstate DNAT` mark、`ip rule show` 有 prio 90；或直接 `systemctl restart docker-via-tun.service` |
+| 外部访问容器发布端口连上就断 | DNAT 回程包被拉进 tun，从节点出口回去 | 确认 `nft list ruleset \| grep "ct status dnat"` 有 Docker 兼容规则、`table inet sing-box` 存在；`systemctl restart sing-box` 会重建 |
 | 桌面端配置 `FATAL`：`auto_redirect is only supported on Linux` | **`auto_redirect` 仅 Linux**，写进共用模板会让 Windows 客户端整份配置失败 | 模板不带该字段；服务器用单独的 `singbox-server` 文件（脚本带 `redirect=1`） |
 
 ## 加规则 / 改顺序

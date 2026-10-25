@@ -88,9 +88,3 @@ test('http_clients 不能 detour 到空 direct outbound（运行时才会报错�
     'sing-box 会报 "detour to an empty direct outbound makes no sense"，应省略 detour',
   );
 });
-
-test('ruleDownload=proxy 时 http_clients 带 detour: proxies', () => {
-  const c = JSON.parse(renderSingbox({ ...loadAll(), baseUrl: BASE, ruleDownload: 'proxy' }));
-  assert.equal(c.http_clients[0].detour, 'proxies');
-  assert.equal(c.route.default_http_client, 'direct-download');
-});

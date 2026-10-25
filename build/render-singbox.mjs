@@ -14,7 +14,6 @@ export function renderSingbox({
   rootDir = process.cwd(),
   format = 'binary',
   ext = 'srs',
-  ruleDownload = 'direct', // 'direct'：直连 CDN；'proxy'：经 proxies 组
 }) {
   const tpl = readFileSync(resolve(rootDir, TPL), 'utf8');
 
@@ -61,8 +60,7 @@ export function renderSingbox({
 
   const body = tpl
     .replace('{{RULE_SET}}', JSON.stringify(ruleSet))
-    .replace('{{RULES}}', JSON.stringify(rules))
-    .replace('{{DOWNLOAD_DETOUR}}', ruleDownload === 'proxy' ? ', "detour": "proxies"' : '');
+    .replace('{{RULES}}', JSON.stringify(rules));
 
   let config;
   try {

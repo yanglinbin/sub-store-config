@@ -7,7 +7,7 @@ import { stringify } from 'yaml';
 import { validateDist } from '../build/validate.mjs';
 
 /**
- * 造一份最小 dist。两份模板都要有 rule_set / rule-providers，
+ * 造一份最小 dist。两端模板都要有 rule_set / rule-providers，
  * 否则 url↔format 一致性校验在单测里跑不到。
  */
 function makeDist(
@@ -18,39 +18,36 @@ function makeDist(
   const d = mkdtempSync(join(tmpdir(), 'ssc-v-'));
   mkdirSync(join(d, 'mihomo'), { recursive: true });
   mkdirSync(join(d, 'singbox/rules'), { recursive: true });
-  for (const n of ['config.yaml', 'config-proxy.yaml']) {
-    writeFileSync(
-      join(d, `mihomo/${n}`),
-      stringify({
-        rules: mihomoRules,
-        'proxy-groups': [],
-        'rule-providers': {
-          a: { type: 'http', behavior: 'domain', format: ruleProviderFormat, url: ruleProviderUrl },
-        },
-      }),
-    );
-  }
-  for (const n of ['template.json', 'template-proxy.json']) {
-    writeFileSync(
-      join(d, `singbox/${n}`),
-      JSON.stringify({
-        outbounds: [],
-        dns: {},
-        route: {
-          // ruleSetFormat 传 null 表示省略 format（sing-box 会按扩展名推断，合法）
-          rule_set: [
-            {
-              type: 'remote',
-              tag: 'a',
-              ...(ruleSetFormat === null ? {} : { format: ruleSetFormat }),
-              url: 'https://x/a.srs',
-            },
-          ],
-          rules: singboxRules,
-        },
-      }),
-    );
-  }
+
+  writeFileSync(
+    join(d, 'mihomo/config.yaml'),
+    stringify({
+      rules: mihomoRules,
+      'proxy-groups': [],
+      'rule-providers': {
+        a: { type: 'http', behavior: 'domain', format: ruleProviderFormat, url: ruleProviderUrl },
+      },
+    }),
+  );
+  writeFileSync(
+    join(d, 'singbox/template.json'),
+    JSON.stringify({
+      outbounds: [],
+      dns: {},
+      route: {
+        // ruleSetFormat 传 null 表示省略 format（sing-box 会按扩展名推断，合法）
+        rule_set: [
+          {
+            type: 'remote',
+            tag: 'a',
+            ...(ruleSetFormat === null ? {} : { format: ruleSetFormat }),
+            url: 'https://x/a.srs',
+          },
+        ],
+        rules: singboxRules,
+      },
+    }),
+  );
   return d;
 }
 

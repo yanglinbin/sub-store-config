@@ -15,12 +15,10 @@
 
 | 文件 | 做什么 |
 |---|---|
-| `docker-via-tun.sh` | **回退方案**（默认关闭）：`up`/`down` 幂等开关，把 3 个 Docker 网段接进 `tun0` 并给发布端口回程打 mark。正常情况用官方 `auto_redirect`，不需要它 |
 | `defaults/sbc-update` | 装到 `/etc/default/sbc-update`：指定订阅源为服务器专用文件（`…/api/file/singbox-server`，带 `redirect=1`） |
 | `sbc-update.sh` | 从 Sub-Store 拉最新的 sing-box 配置，过五道闸（下载 / 形状 / 节点数≥5 / `auto_redirect` 必须存在 / `sing-box check`）后原子替换并重启；内容没变则不重启。订阅源优先级：环境变量 > `/etc/default/sbc-update` > 内置默认 |
 | `sbc-sync-dist.sh` | 把 `dist` 分支（单 commit，强推）同步到 `/data/nginx/html/sbc`，让客户端从本站拉 `.srs`；工作副本在 `/opt/sbc-dist`（可随时删掉重建）；完整性闸口：`.srs` 少于 15 个就 `die`，旧产物原样保留 |
-| `install.sh` | 幂等安装：脚本 → `/usr/local/bin`（700）、单元 → `/etc/systemd/system`、`defaults/sbc-update` → `/etc/default/`、`daemon-reload`、启用 2 个 timer（`docker-via-tun` 保持 disabled） |
-| `systemd/docker-via-tun.service` | 同上，**默认 disabled**；`oneshot` + `RemainAfterExit`，`PartOf=sing-box.service`（重启 sing-box 时连带重跑） |
+| `install.sh` | 幂等安装：脚本 → `/usr/local/bin`（700）、单元 → `/etc/systemd/system`、`defaults/sbc-update` → `/etc/default/`、`daemon-reload`、启用 2 个 timer |
 | `systemd/sbc-update.service` | `oneshot`，跑 `sbc-update.sh` |
 | `systemd/sbc-update.timer` | `OnCalendar=*-*-* 05:00:00`、`Persistent=true`、`RandomizedDelaySec=300` |
 | `systemd/sbc-sync-dist.service` | `oneshot`，跑 `sbc-sync-dist.sh` |
@@ -49,14 +47,8 @@
 - `nft`：`table inet sing-box` + `ip mangle` 里的 Docker 兼容规则
 - 新增容器网段无需改任何脚本
 
-**回退方案（默认不启用）**：内核 nft 不可用或想回到纯 `ip rule` 时——先关掉 `auto_redirect`
-（Sub-Store 换回共用文件），再：
-
-```bash
-sudo systemctl enable --now docker-via-tun.service   # 装 90/98/100 + DNAT mark
-```
-
-两套是等价手段，**别同时开**（重复接管、规则叠加）。`install.sh` 默认把该服务 disable。
+这是**唯一方案**。早期手写的 `ip rule` + `conntrack mark` 脚本（`docker-via-tun.sh`）已删除 ——
+需要时从 git 历史取回，但先确认内核/`nft` 为什么不可用。
 
 
 ## 安装（三步）
@@ -75,7 +67,7 @@ sudo /usr/local/bin/sbc-sync-dist.sh
 sudo /usr/local/bin/sbc-update.sh
 ```
 
-`install.sh` 的告警（找不到 `git`/`rsync`/`sing-box`/`iptables` 等）只是提示，对应脚本运行时才会真失败。
+`install.sh` 的告警（找不到 `git`/`rsync`/`sing-box` 等）只是提示，对应脚本运行时才会真失败。
 
 ## 日常运维
 
@@ -85,11 +77,9 @@ sudo /usr/local/bin/sbc-update.sh
 | 立刻重拉配置 | `sudo systemctl start sbc-update.service`（或 `sudo /usr/local/bin/sbc-update.sh`） |
 | 看重启/同步日志 | `journalctl -u sbc-update -u sbc-sync-dist -n 100` / `journalctl -u sing-box -n 100` |
 | 看定时器下次触发 | `systemctl list-timers 'sbc-*'` |
-| 临时换订阅源/网段/仓库 | `SUBSTORE_FILE_URL=… sbc-update.sh`、`SUBNETS="172.20.0.0/16" docker-via-tun.sh up`、`REPO=… sbc-sync-dist.sh` |
+| 临时换订阅源/仓库 | `SUBSTORE_FILE_URL=… sbc-update.sh`、`REPO=… sbc-sync-dist.sh` |
 | 回滚配置 | `sudo install -o root -g sing-box -m 640 /etc/sing-box/config.json.bak.<时间戳> /etc/sing-box/config.json && sudo systemctl restart sing-box` |
 | 备份清单 | `ls -1t /etc/sing-box/config.json.bak.*`（只保留最近 3 份） |
-| 切回回退方案（`ip rule`） | 先把 Sub-Store 的订阅源换回共用文件，再 `sudo systemctl enable --now docker-via-tun.service` |
-| 关掉回退方案 | `sudo systemctl disable --now docker-via-tun.service`（= 执行 `down`） |
 | 静态目录直接看 | `ls /data/nginx/html/sbc`、`curl -I https://sub-store.yilabao.top/sbc/build-info.json` |
 
 ## 自托管规则集
@@ -102,15 +92,15 @@ sudo /usr/local/bin/sbc-update.sh
   真出事可把 `RULES_BASE_URL` 改回 jsDelivr 的 `https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist` 重跑 CI。
 - Sub-Store 里 `clash` / `singbox` 两个文件的模板与脚本 URL 也已指向自己域名，
   `singbox` 使用**直连变体** `template.json`（规则集就在本机 nginx，不需要经代理下载），
-  因此 sing-box 启动不再依赖「节点必须活着」。`template-proxy.json` 仅在客户端连不上自己域名时当备选。
+  因此 sing-box 启动不再依赖「节点必须活着」。
 
 ## 故障模式
 
 | 症状 | 原因 | 处理 |
 |---|---|---|
 | 客户端能连上但 DNS 结果全 `198.18.x` 却打不开网页 | fakeip 必须配 TUN：只用 `mixed-in` 而关掉 tun 时，fakeip 域名没有设备承载 | 保留 tun 入站；或用 `noCache=true` 且不启用 fakeip 的变体 |
-| 外部访问容器发布的端口（80/443）连上就断 | DNAT 回程包被拉进 tun，从节点出口回去 | `auto_redirect` 方案：确认 `nft list ruleset \| grep "ct status dnat"` 有 Docker 兼容规则、`table inet sing-box` 存在；回退方案：确认 `iptables -t mangle -S PREROUTING` 的 DNAT mark 与 `ip rule` prio 90 |
-| 容器完全断网 | 回退方案里 `tun0` 不存在却加了 prio 100（黑洞） | 先 `systemctl restart sing-box`，再 `systemctl restart docker-via-tun.service`；脚本在 `tun0` 缺失时退化为 prio 8000 不断网。`auto_redirect` 方案下规则由 sing-box 自己重建，重启即可 |
+| 外部访问容器发布的端口（80/443）连上就断 | DNAT 回程包被拉进 tun，从节点出口回去 | 确认 `nft list ruleset \| grep "ct status dnat"` 有 Docker 兼容规则、`table inet sing-box` 存在；`systemctl restart sing-box` 会重建 |
+| 容器完全断网 | 订阅源指错成桌面共用文件（配置里没有 `auto_redirect`），容器悄悄退回直连 | `sbc-update` 有强制闸会拒绝这种配置；手工排查：`grep -c '"auto_redirect": true' /etc/sing-box/config.json` 应为 1 |
 | 客户端 Windows 上配置 `FATAL`：`auto_redirect is only supported on Linux` | `auto_redirect` 仅 Linux 支持，写进共用模板会让桌面端失败 | 模板保持不带该字段，只在服务器链接上用 `&redirect=1` 注入（见主 README） |
 | `sbc-update` 天天 `[FAIL] 节点数只有 0 个` | 订阅失效/机场面板改路径 | 修 Sub-Store 订阅；脚本不会替换旧配置，服务仍在跑 |
 | 站点 404 `/sbc/...` | nginx 片段没贴或没 reload，或 `sbc-sync-dist` 没跑过 | `curl -I …/sbc/build-info.json`；`journalctl -u sbc-sync-dist` |
