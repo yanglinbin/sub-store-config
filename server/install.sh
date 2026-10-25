@@ -47,8 +47,10 @@ for u in $UNITS; do
 done
 
 systemctl daemon-reload || die "systemctl daemon-reload 失败"
-systemctl enable --now docker-via-tun.service sbc-update.timer sbc-sync-dist.timer \
+# 定时器常开；docker-via-tun 只是「回退方案」，默认关闭（与 auto_redirect 叠加会重复接管）
+systemctl enable --now sbc-update.timer sbc-sync-dist.timer \
     || die "systemctl enable --now 失败（看 journalctl -xe）"
+systemctl disable --now docker-via-tun.service >/dev/null 2>&1 || true
 
 cat <<EOF
 
