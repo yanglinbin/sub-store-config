@@ -10,11 +10,15 @@ function makeDist(mihomoRules, singboxRules) {
   const d = mkdtempSync(join(tmpdir(), 'ssc-v-'));
   mkdirSync(join(d, 'mihomo'), { recursive: true });
   mkdirSync(join(d, 'singbox/rules'), { recursive: true });
-  writeFileSync(join(d, 'mihomo/config.yaml'), stringify({ rules: mihomoRules, 'proxy-groups': [] }));
-  writeFileSync(
-    join(d, 'singbox/template.json'),
-    JSON.stringify({ outbounds: [], dns: {}, route: { rules: singboxRules } }),
-  );
+  for (const name of ['config.yaml', 'config-proxy.yaml']) {
+    writeFileSync(join(d, `mihomo/${name}`), stringify({ rules: mihomoRules, 'proxy-groups': [] }));
+  }
+  for (const name of ['template.json', 'template-proxy.json']) {
+    writeFileSync(
+      join(d, `singbox/${name}`),
+      JSON.stringify({ outbounds: [], dns: {}, route: { rules: singboxRules } }),
+    );
+  }
   return d;
 }
 

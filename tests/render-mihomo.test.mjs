@@ -24,7 +24,6 @@ test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格�
     type: 'http',
     behavior: 'domain',
     format: 'text',
-    proxy: 'proxies',
     url: `${BASE}/mihomo/rules/category-ads-all.list`,
     path: './ruleset/category-ads-all.yaml',
     interval: 86400,
@@ -34,6 +33,12 @@ test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格�
   assert.equal(c['rule-providers'].f1tv.behavior, 'classical');
   assert.equal(c['rule-providers'].gfw.url, `${BASE}/mihomo/rules/gfw.list`);
   assert.equal(c['rule-providers'].google.url, `${BASE}/mihomo/rules/google.list`);
+});
+
+test('经代理变体：每个 provider 都带 proxy: proxies', () => {
+  const c = parse(renderMihomo({ ...loadAll(), baseUrl: BASE, ruleDownload: 'proxy' }));
+  const providers = Object.values(c['rule-providers']);
+  assert.equal(providers.filter((p) => p.proxy === 'proxies').length, providers.length);
 });
 
 test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
