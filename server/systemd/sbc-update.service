@@ -1,0 +1,9 @@
+[Unit]
+Description=从 Sub-Store 拉取最新的 sing-box 配置并重启 sing-box
+Documentation=https://github.com/yanglinbin/sub-store-config/blob/main/server/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sbc-update.sh

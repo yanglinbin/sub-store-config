@@ -1,0 +1,12 @@
+[Unit]
+Description=每天 04:40 同步一次 dist 静态产物
+
+[Timer]
+# 比 sbc-update 早 20 分钟：静态站点先刷新，客户端随后拉到的规则集才是当天的
+OnCalendar=*-*-* 04:40:00
+Persistent=true
+RandomizedDelaySec=300
+Unit=sbc-sync-dist.service
+
+[Install]
+WantedBy=timers.target

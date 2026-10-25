@@ -1,0 +1,15 @@
+[Unit]
+Description=把 Docker 容器流量接入 sing-box TUN（ip rule + conntrack mark）
+Documentation=https://github.com/yanglinbin/sub-store-config/blob/main/server/README.md
+# tun0 由 sing-box 创建，Docker 的网段要先存在，iptables 才有 PREROUTING 可挂
+After=sing-box.service docker.service network-online.target
+Wants=sing-box.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/docker-via-tun.sh up
+ExecStop=/usr/local/bin/docker-via-tun.sh down
+
+[Install]
+WantedBy=multi-user.target

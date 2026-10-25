@@ -1,0 +1,9 @@
+[Unit]
+Description=把 dist 分支同步到 nginx 静态目录（/data/nginx/html/sbc）
+Documentation=https://github.com/yanglinbin/sub-store-config/blob/main/server/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sbc-sync-dist.sh

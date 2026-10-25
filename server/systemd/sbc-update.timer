@@ -1,0 +1,13 @@
+[Unit]
+Description=每天 05:00 拉取一次 sing-box 配置
+
+[Timer]
+# 04:40 的静态站点同步先跑，05:00 再刷配置
+OnCalendar=*-*-* 05:00:00
+# 机器关机错过的这次，开机后补跑
+Persistent=true
+RandomizedDelaySec=300
+Unit=sbc-update.service
+
+[Install]
+WantedBy=timers.target

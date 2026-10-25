@@ -128,6 +128,8 @@ rules/custom/*.yaml     自建清单：airport google microsoft steam f1tv
 templates/*.tpl         两端配置模板 + 3 个 Sub-Store 脚本模板
 lib/grouping.mjs        纯函数：地区识别 + 四个组成员（两端共享）
 build/*.mjs             抓取 / 解析 / 构建规则集 / 渲染 / 校验 / 冒烟
+server/                 服务器运维资产：容器分流 / 拉配置 / 同步静态站点 / systemd 单元
+                        （只影响本机部署，不影响规则语义与 CI 发布）
 dist/                   产物（gitignore，CI 推 dist 分支）
 ```
 
@@ -135,7 +137,7 @@ dist/                   产物（gitignore，CI 推 dist 分支）
 
 ```bash
 npm ci
-npm test        # 60 个单测（node --test）
+npm test        # 70 个单测（node --test）
 npm run build   # 生成 dist/（需要 sing-box 才能编 .srs）
 npm run probe   # 冒烟：真跑 sing-box（本地 rule-set）+ mihomo -t（本机已装 mihomo）
 npm run validate
@@ -153,6 +155,81 @@ npm run validate
 规则集没有改走 raw：那需要"用代理下载规则集"（mihomo `rule-providers.<名称>.proxy: proxies`、
 sing-box `http_clients[].detour: proxies`），代价是**代理挂了规则集就下不到、客户端直接 FATAL**。
 当前"直连 CDN"保证代理挂掉时客户端仍能启动。
+
+## 服务器部署与运维
+
+适用于「阿里云 Linux + sing-box（systemd，unit 自带 `User=sing-box`、`-C /etc/sing-box`、TUN `tun0`）
++ Docker 三网段 + nginx 容器」这套自建环境。脚本全部在 `server/`，只影响这台机器怎么跑，
+**不改规则语义、也不改 CI 推 `dist` 的逻辑**。详细版见 `server/README.md`。
+
+### 流量分层：宿主机 vs 容器
+
+```
+宿主机进程（curl / 客户端）──► 主表 default → tun0 ──► sing-box ──► 节点
+                                        ▲
+                            ip rule prio 100 → 表 2022
+                                        │
+Docker 容器（172.17/172.18/172.19）──► ip rule 判定
+    ├─ prio 90  有 conntrack mark（DNAT 回程）→ 主表 → eth0   外部访问容器的回包
+    ├─ prio 98  to 私网（10/8、172.16/12、192.168/16）→ 主表    容器访问局域网
+    └─ prio 100 其余 → 表 2022 → tun0 → sing-box               容器出网走代理
+```
+
+数字越小越先匹配。表 `2022` 由 tun 的 `auto_route` 维护；`tun0` 不存在时脚本不加 prio 100，
+改为 prio 8000（`lookup main` = 不接管）并告警 —— 容器只是「暂时不代理」，不会断网。
+
+### `server/` 里有什么
+
+| 文件 | 一行说明 |
+|---|---|
+| `docker-via-tun.sh` | `up`/`down` 幂等开关：容器网段接进 `tun0` + 给发布端口回程打 mark |
+| `sbc-update.sh` | 每天从 Sub-Store 拉配置，四道闸（下载 / 形状 / 节点数≥5 / `sing-box check`）后原子替换并重启，内容没变不重启 |
+| `sbc-sync-dist.sh` | 把 `dist` 分支（单 commit、强推）同步到 `/data/nginx/html/sbc` |
+| `install.sh` | 幂等安装：脚本进 `/usr/local/bin`（700）、单元进 `/etc/systemd/system`、`enable --now` |
+| `systemd/` | `docker-via-tun.service` + `sbc-update.{service,timer}`（05:00）+ `sbc-sync-dist.{service,timer}`（04:40，早于更新） |
+| `nginx/sbc-static.conf` | `location /sbc/` 片段，贴进 `sub-store.yilabao.top` 的 443 server 块 |
+
+### 安装三步
+
+```bash
+sudo ./server/install.sh                     # 1. 装脚本与单元，启用 1 service + 2 timer
+                                             # 2. 贴 server/nginx/sbc-static.conf（location / 之前）
+                                             #    然后 docker exec <nginx容器> nginx -t && … -s reload
+sudo /usr/local/bin/sbc-sync-dist.sh         # 3. 手动跑一次两个脚本，确认输出 [OK]
+sudo /usr/local/bin/sbc-update.sh
+```
+
+### 日常命令
+
+| 想做的事 | 命令 |
+|---|---|
+| 手动刷新静态站点 | `sudo systemctl start sbc-sync-dist.service` |
+| 手动重拉配置 | `sudo systemctl start sbc-update.service` |
+| 看日志 | `journalctl -u sbc-update -u sbc-sync-dist -n 100` |
+| 看下次触发 | `systemctl list-timers 'sbc-*'` |
+| 回滚配置 | `sudo install -o root -g sing-box -m 640 /etc/sing-box/config.json.bak.<时间戳> /etc/sing-box/config.json && sudo systemctl restart sing-box` |
+| 关/开容器分流 | `sudo systemctl stop|start docker-via-tun.service` |
+
+配置备份只保留最近 3 份，`ls -1t /etc/sing-box/config.json.bak.*` 可查。
+
+### 自托管规则集
+
+仓库变量 **`RULES_BASE_URL = https://sub-store.yilabao.top/sbc`**（CI 里作为 job 级 `BASE_URL`）：
+构建出的 `rule_set.url` / `rule-provider.url` 全部指向自己域名，客户端不再依赖 jsDelivr。
+
+- 依赖 `sbc-sync-dist.timer`（04:40）比 CI 的日构建（04:00 UTC）之后落地；push 后可手动 `systemctl start sbc-sync-dist.service`。
+- 站点挂掉客户端仍能起：`.srs` 有 `cache_file` / `interval: 86400` 本地缓存；
+  实在不行把 `RULES_BASE_URL` 改回 `https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist` 重跑 CI。
+- 客户端如果觉得直连自己域名更快，可以让**模板**（`singbox/template.json`）用 `BASE_URL` 指向自己域名，
+  而规则集继续走 CDN —— 两种基址的取舍见上一节。
+
+### 故障模式
+
+| 症状 | 原因 | 处理 |
+|---|---|---|
+| 域名解析成 `198.18.x` 却打不开网页 | **fakeip 必须配 tun**：只有 `mixed-in` 没有设备承载 fakeip 地址 | 保留 tun 入站；或不用 fakeip |
+| 外部访问容器发布端口连上就断 | **容器进 tun 必须带 DNAT mark**：回程包被 prio 100 拉进 tun，从节点出口回去 | 确认 `iptables -t mangle -S PREROUTING` 有 `ctstate DNAT` mark、`ip rule show` 有 prio 90；或直接 `systemctl restart docker-via-tun.service` |
+| 桌面端配置 `FATAL`：`auto_redirect is only supported on Linux` | **`auto_redirect` 仅 Linux**，写进共用模板会让 Windows 客户端整份配置失败 | 模板不带该字段，只在服务器链接上加 `&redirect=1`（见上文「让 Docker 容器也走代理」） |
 
 ## 加规则 / 改顺序
 
