@@ -1,0 +1,6 @@
+# 机场面板 / 订阅分发域名
+# 注意：上游 clash-rules 的 direct.txt 里含有 +.ikuuu.one 与 +.no-mad-sub.one，
+# 会把它们判成"国内直连"；实际这些域名只能经代理访问，所以必须在 direct 之前改判 proxies。
+domain_suffix:
+  - ikuuu.one
+  - no-mad-sub.one

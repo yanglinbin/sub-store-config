@@ -42,6 +42,9 @@ proxy:
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"]
 
 # ============ 自建（仓库内维护） ============
+subscription:       # 机场面板/订阅域名：上游 direct.txt 误判为直连，这里改判 proxies
+  behavior: domain
+  custom: rules/custom/subscription.yaml
 microsoft:
   behavior: classical
   custom: rules/custom/microsoft.yaml
