@@ -84,12 +84,13 @@ sudo /usr/local/bin/sbc-update.sh
 
 - 仓库变量 `RULES_BASE_URL = https://sub-store.yilabao.top/sbc` → CI 构建时 `BASE_URL` 用它，
   客户端配置里的 17 个 `rule_set.url` / `rule-provider.url` 全部指向自己域名。
-- 因此 `sbc-sync-dist.sh` 必须跑在**构建之后**（定时器按**服务器本地时间** 04:40；CI 日构建是 04:00 UTC = 服务器 12:00（若服务器是 UTC+8），当天已足够；
-  也可以 push 后手动 `systemctl start sbc-sync-dist.service`）。
+- 因此 `sbc-sync-dist.sh` 必须跑在**构建之后**。定时器按**服务器本地时间**：04:40 同步 dist、05:00 拉配置；
+  CI 的日构建是 04:00 UTC（服务器 UTC+8 时＝当天 12:00），push 后可手动 `systemctl start sbc-sync-dist.service` 立刻生效。
 - 静态站点挂了不会让客户端起不来：`.srs` 有 `cache_file` / `interval: 86400` 本地缓存；
   真出事可把 `RULES_BASE_URL` 改回 jsDelivr 的 `https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist` 重跑 CI。
-- 若客户端直连自己域名更稳（例如服务器线路好），也可以只让**配置模板**走
-  `template.json` 直连变体，规则集继续走 CDN —— 两种基址的取舍见主 README「两种基址（别混用）」。
+- Sub-Store 里 `clash` / `singbox` 两个文件的模板与脚本 URL 也已指向自己域名，
+  `singbox` 使用**直连变体** `template.json`（规则集就在本机 nginx，不需要经代理下载），
+  因此 sing-box 启动不再依赖「节点必须活着」。`template-proxy.json` 仅在客户端连不上自己域名时当备选。
 
 ## 故障模式
 

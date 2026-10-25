@@ -87,6 +87,9 @@ sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 > 经代理下载的已知风险：sing-box 启动时 urltest 还没测速，会先用第一个成员；
 > 若那一个节点是死的，17 个 rule-set 全部失败 → `FATAL`。用这个变体前请确认节点可用。
 
+**规则集改为自托管之后（`RULES_BASE_URL` 指向自己域名），两个变体下载的都是同一台机器，
+服务器侧已切回直连变体（`singbox/template.json`）——启动不再依赖节点可用性。**
+
 ## 策略组
 
 | 组（按显示顺序） | 成员顺序 | 默认 |
@@ -220,8 +223,9 @@ sudo /usr/local/bin/sbc-update.sh
 - 依赖 `sbc-sync-dist.timer`（04:40）比 CI 的日构建（04:00 UTC）之后落地；push 后可手动 `systemctl start sbc-sync-dist.service`。
 - 站点挂掉客户端仍能起：`.srs` 有 `cache_file` / `interval: 86400` 本地缓存；
   实在不行把 `RULES_BASE_URL` 改回 `https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist` 重跑 CI。
-- 客户端如果觉得直连自己域名更快，可以让**模板**（`singbox/template.json`）用 `BASE_URL` 指向自己域名，
-  而规则集继续走 CDN —— 两种基址的取舍见上一节。
+- Sub-Store 里两个文件（`clash` / `singbox`）的**模板 URL 与脚本 URL 也都指向自己域名**，
+  `singbox` 用直连变体 `template.json`、`clash` 用 `mihomo/config.yaml`：规则集就在本机 nginx，
+  直连即可，不需要再绕代理；`template-proxy.json` / `config-proxy.yaml` 只在「客户端连不上自己域名」时当备选。
 
 ### 故障模式
 
