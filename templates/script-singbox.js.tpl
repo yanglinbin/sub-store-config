@@ -1,6 +1,8 @@
 // 生成物：由 build/emit-script.mjs 从 lib/grouping.mjs + config/regions.yaml 内联生成，勿手改。
 // 用途：Sub-Store「文件 → 脚本操作」（普通 file + 远程模板）。
-// 参数：#name=<订阅名|组合订阅名>&type=sub|col&noCache=true（type 省略 = 单条订阅）
+// 参数：#name=<订阅名|组合订阅名>&type=sub|col&noCache=true&redirect=1
+//   type     省略 = 单条订阅，col = 组合订阅
+//   redirect 1 = 给 tun 入站补 auto_redirect（仅 Linux；Windows 上该字段会让配置直接 FAIL，默认不补）
 // 注意：本文件靠顶层 await 完成工作（Sub-Store 会把脚本内联进 async 函数体），
 //      不要包成 (async () => { ... })() 悬浮 Promise，否则 $content 会在赋值前被读取。
 const REGIONS = __REGIONS_JSON__;
@@ -8,11 +10,20 @@ const REGION_EXCLUDE = __REGION_EXCLUDE__;
 
 __GROUPING_SRC__
 
-const { name, type } = $arguments || {};
+const { name, type, redirect } = $arguments || {};
 if (!name) throw new Error('脚本参数缺少 name（订阅名或组合订阅名）');
 const sourceType = /^(col|collection)/i.test(type || '') ? 'collection' : 'subscription';
 
 const config = JSON.parse($files[0]);
+
+// auto_redirect 仅 Linux 支持：显式传 redirect=1 才注入，避免 Windows 客户端整份配置加载失败
+if (/^(1|true|yes|on)$/i.test(redirect || '')) {
+  for (const inbound of config.inbounds || []) {
+    if (inbound.type === 'tun' && inbound.auto_route) {
+      inbound.auto_redirect = true;
+    }
+  }
+}
 const artifact = await produceArtifact({
   type: sourceType,
   name,

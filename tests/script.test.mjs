@@ -214,3 +214,40 @@ ${code}
 })()`, ctx);
   assert.equal(calls[0].type, 'subscription');
 });
+
+test('默认不注入 auto_redirect（Windows 会 FATAL）', async () => {
+  await emitScripts({ regionsPath: 'config/regions.yaml', outDir });
+  const code = readFileSync(join(outDir, 'singbox.js'), 'utf8');
+  const tpl = JSON.parse(template);
+  tpl.inbounds = [{ type: 'tun', tag: 'tun-in', auto_route: true, address: ['10.66.0.1/30'] }];
+  const ctx = {
+    $arguments: { name: 'default' },
+    $files: [JSON.stringify(tpl)],
+    $content: null,
+    produceArtifact: async () => [{ type: 'vless', tag: '🇭🇰Hong Kong 03' }],
+    console,
+  };
+  vm.createContext(ctx);
+  await vm.runInContext(`(async () => {
+${code}
+})()`, ctx);
+  assert.equal('auto_redirect' in JSON.parse(ctx.$content).inbounds[0], false);
+});
+
+test('redirect=1 时给 tun 注入 auto_redirect', async () => {
+  await emitScripts({ regionsPath: 'config/regions.yaml', outDir });
+  const code = readFileSync(join(outDir, 'singbox.js'), 'utf8');
+  const tpl = JSON.parse(template);
+  tpl.inbounds = [{ type: 'tun', tag: 'tun-in', auto_route: true, address: ['10.66.0.1/30'] }];
+  const ctx = {
+    $arguments: { name: 'default', redirect: '1' },
+    $files: [JSON.stringify(tpl)],
+    $content: null,
+    produceArtifact: async () => [{ type: 'vless', tag: '🇭🇰Hong Kong 03' }],
+    console,
+  };
+  vm.createContext(ctx);
+  await vm.runInContext(`(async () => {\n${code}\n})()`, ctx);
+  const out = JSON.parse(ctx.$content);
+  assert.equal(out.inbounds[0].auto_redirect, true);
+});

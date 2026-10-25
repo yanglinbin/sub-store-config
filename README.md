@@ -54,6 +54,21 @@ sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 ...lancidr / cncidr / telegramcidr...
 ```
 
+### 让 Docker 容器也走代理（仅 Linux 服务器）
+
+`auto_redirect` 是 sing-box 官方给的方案（文档原话：*avoids conflicts between TUN and Docker bridge networks*），
+但它**只支持 Linux**：把该字段写进共用模板会让 Windows 客户端的配置直接 `FATAL`（实测 1.14.3：
+`initialize inbound[0]: auto_redirect is only supported on Linux`）。
+
+所以模板保持共用，由脚本按参数注入：
+
+```
+…/scripts/singbox.js#name=default&noCache=true&redirect=1     ← 服务器（Linux）
+…/scripts/singbox.js#name=default&noCache=true                ← Windows 桌面（默认不带）
+```
+
+开启后可以删掉手写的 `ip rule` / `conntrack mark`；这两层是等价手段，别同时上。
+
 ### 三个常见"优化"建议的实测结论
 
 | 建议 | 结论 | 依据 |
