@@ -33,6 +33,12 @@ for s in $SCRIPTS; do
     echo "[OK] $BIN/$s"
 done
 
+# 本地配置（订阅源等）：仓库是唯一真相，重装会覆盖
+if [ -f "$HERE/defaults/sbc-update" ]; then
+    install -o root -g root -m 644 "$HERE/defaults/sbc-update" /etc/default/sbc-update         || die "安装 /etc/default/sbc-update 失败"
+    echo "[OK] /etc/default/sbc-update"
+fi
+
 for u in $UNITS; do
     src="$HERE/systemd/$u"
     [ -f "$src" ] || die "缺少 $src"
@@ -49,7 +55,8 @@ cat <<EOF
 安装完成。定时任务：
   sbc-sync-dist.timer  每天 04:40  同步 dist → /data/nginx/html/sbc
   sbc-update.timer     每天 05:00  拉配置 → /etc/sing-box/config.json → 重启 sing-box
-  docker-via-tun.service  开机/新增规则时把容器网段接进 tun0（oneshot，常驻状态由 systemd 记录）
+  回退方案（默认关闭）：systemctl enable --now docker-via-tun.service
+     —— 只用在不支持 auto_redirect 的内核上；两套同时开会重复接管，别叠
 
 还剩三步需要人工做（脚本不碰你的 nginx 配置，避免改坏在跑的站点）：
   1. 把 $HERE/nginx/sbc-static.conf 贴进 /data/nginx/conf/ 下

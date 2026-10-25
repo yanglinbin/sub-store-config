@@ -8,6 +8,12 @@
 #       SUBSTORE_FILE_URL=... sbc-update.sh
 set -u
 
+# 订阅源优先级：环境变量 > /etc/default/sbc-update > 内置默认（桌面共用文件）
+SUBSTORE_FILE_URL="${SUBSTORE_FILE_URL:-}"
+if [ -z "$SUBSTORE_FILE_URL" ] && [ -r /etc/default/sbc-update ]; then
+    # shellcheck disable=SC1091
+    . /etc/default/sbc-update
+fi
 SUBSTORE_FILE_URL="${SUBSTORE_FILE_URL:-https://sub-store.yilabao.top/cdc1dc50c1a6799f49c87914ef77def3/api/file/singbox}"
 CFG=/etc/sing-box/config.json
 BAK_GLOB=/etc/sing-box/config.json.bak

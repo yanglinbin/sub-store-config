@@ -1,0 +1,8 @@
+# sbc-update.sh 的本地配置（install.sh 会覆盖写入 /etc/default/sbc-update）
+#
+# 服务器专用文件：同一个模板 + 脚本参数 redirect=1，
+# 让 tun 入站带上 auto_redirect（仅 Linux）。桌面/Windows 继续用共用的 singbox 文件，
+# 那边不能出现 auto_redirect（会 FATAL: only supported on Linux）。
+#
+# 优先级：环境变量 > 本文件 > sbc-update.sh 里的内置默认（共用文件）
+SUBSTORE_FILE_URL=https://sub-store.yilabao.top/cdc1dc50c1a6799f49c87914ef77def3/api/file/singbox-server

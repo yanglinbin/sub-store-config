@@ -56,18 +56,27 @@ sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 
 ### 让 Docker 容器也走代理（仅 Linux 服务器）
 
-`auto_redirect` 是 sing-box 官方给的方案（文档原话：*avoids conflicts between TUN and Docker bridge networks*），
-但它**只支持 Linux**：把该字段写进共用模板会让 Windows 客户端的配置直接 `FATAL`（实测 1.14.3：
-`initialize inbound[0]: auto_redirect is only supported on Linux`）。
-
-所以模板保持共用，由脚本按参数注入：
+用 sing-box 官方的 `auto_redirect`（1.10+，仅 Linux，需 `auto_route`）。官方文档原话：
+*auto_redirect is always recommended on Linux … avoids conflicts between TUN and Docker bridge networks* ——
+它按 **mark** 接管宿主机和容器的出网（不看网段，新增 Docker 网络无需改任何脚本），
+并自动插入 Docker 兼容规则把这些包排除在 tun 之外：
 
 ```
-…/scripts/singbox.js#name=default&noCache=true&redirect=1     ← 服务器（Linux）
-…/scripts/singbox.js#name=default&noCache=true                ← Windows 桌面（默认不带）
+ip rule 9000 / 9001 / 9002 / 32768      ← sing-box 启动时自己维护
+table inet sing-box  +  ip mangle       ← ct status dnat → mark 0x233（端口回程走主表直出）
 ```
 
-开启后可以删掉手写的 `ip rule` / `conntrack mark`；这两层是等价手段，别同时上。
+该字段**只支持 Linux**，写进共用模板会让 Windows 客户端直接 `FATAL`
+（实测 1.14.3：`initialize inbound[0]: auto_redirect is only supported on Linux`）。
+所以 Sub-Store 里是**两份文件、同一个模板**：
+
+| 文件 | 脚本参数 | 谁用 |
+|---|---|---|
+| `singbox-server` | `…#name=default&noCache=true&redirect=1` | 服务器（`/etc/default/sbc-update` 指过去） |
+| `singbox` | `…#name=default&noCache=true` | Windows / 桌面 |
+
+回退路径：内核 nft 不可用时改用 `server/docker-via-tun.sh`（`ip rule` 90/98/100 + DNAT mark），
+并把订阅源换回 `singbox` 文件（不带 `auto_redirect`）。**两条路是等价手段，不要同时开。**
 
 ### 三个常见"优化"建议的实测结论
 
@@ -233,7 +242,7 @@ sudo /usr/local/bin/sbc-update.sh
 |---|---|---|
 | 域名解析成 `198.18.x` 却打不开网页 | **fakeip 必须配 tun**：只有 `mixed-in` 没有设备承载 fakeip 地址 | 保留 tun 入站；或不用 fakeip |
 | 外部访问容器发布端口连上就断 | **容器进 tun 必须带 DNAT mark**：回程包被 prio 100 拉进 tun，从节点出口回去 | 确认 `iptables -t mangle -S PREROUTING` 有 `ctstate DNAT` mark、`ip rule show` 有 prio 90；或直接 `systemctl restart docker-via-tun.service` |
-| 桌面端配置 `FATAL`：`auto_redirect is only supported on Linux` | **`auto_redirect` 仅 Linux**，写进共用模板会让 Windows 客户端整份配置失败 | 模板不带该字段，只在服务器链接上加 `&redirect=1`（见上文「让 Docker 容器也走代理」） |
+| 桌面端配置 `FATAL`：`auto_redirect is only supported on Linux` | **`auto_redirect` 仅 Linux**，写进共用模板会让 Windows 客户端整份配置失败 | 模板不带该字段；服务器用单独的 `singbox-server` 文件（脚本带 `redirect=1`） |
 
 ## 加规则 / 改顺序
 
