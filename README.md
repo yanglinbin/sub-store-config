@@ -12,13 +12,13 @@
 
 ---
 
-## 规则集（17 个模块）
+## 规则集（16 个模块）
 
 | # | 模块 | 来源 | 类型 | → 组 |
 |---|---|---|---|---|
-| 1 | `category-ads-all` | clash-rules `reject.txt` | domain | **reject** |
-| 2 | `private` | clash-rules `private.txt` | domain | direct |
-| 3 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
+| 1 | `subscription` | 自建 | domain | **proxies** |
+| 2 | `selfhost` | 自建 | domain | direct |
+| 3 | `private` | clash-rules `private.txt` | domain | direct |
 | 4 | `f1tv` | 自建 | classical | **f1tv** |
 | 5 | `microsoft` | 自建（含 2 条 KEYWORD） | classical | direct |
 | 6 | `apple` | clash-rules `apple.txt` | domain | direct |
@@ -32,6 +32,7 @@
 | 14 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
 | 15 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
 | 16 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
+
 
 未命中 → `final` 组。**两端都有兜底**：mihomo 末尾追加 `MATCH,final`，sing-box 用 `route.final: "final"`。
 
@@ -49,10 +50,50 @@ sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 ```json
 {"action":"sniff"},                        // 识别域名/协议
 {"action":"hijack-dns","protocol":"dns"},  // 53 端口的 DNS 拉进 sing-box
-...15 条规则...                             // 第 9/10/11/12/13 条之后自动插入 ↓
+...域名类规则...                             // 第 9/10/11/12/13 条之后自动插入 ↓
 {"action":"resolve","server":"local-dns"}, // 只对没命中域名规则的连接生效
 ...lancidr / cncidr / telegramcidr...
 ```
+
+## DNS 分流（sing-box 1.14 的 `evaluate` / `race`）
+
+目标：**国内域名只问国内 DNS，国外域名交给出口侧去问，两边都可能命中时并发问、谁先给出可用答案用谁**。
+DNS 规则由 `order.yaml` 的 `target` 派生（`build/render-singbox.mjs: buildDnsRules`），改顺序不用改模板。
+
+| 查询 | 走哪 | 为什么 |
+|---|---|---|
+| 内网域名（`.lan/.local/.direct`）、NTP 主机 | `local-dns` | 必须本地答，走代理直接不通 |
+| `target=direct` 的域名模块（`direct`/`selfhost`/`private`/`apple`/`icloud`） | `local-dns`（真实 IP） | 反正要直连，拿到真实 IP 可省掉连接期的一次 `resolve` |
+| `target=proxies` 的域名模块（`subscription`/`google`/`gfw`/`proxy`）的 A/AAAA | `fakeip` | 域名直接交给出口，本地零 DNS 等待、零污染 |
+| 其余查询类型（`HTTPS`/`SVCB` 等非 A/AAAA） | `remote-dns` | 国内 DNS 对国外域名只会给出 CN 视角的答案 |
+| 哪张域名表都没进的 A/AAAA | 本地 + 远端**并发** | 见下 |
+
+未命中分支用 1.14 才有的能力，四条规则配合：
+
+```json
+{"action":"evaluate","server":"local-dns","timeout":"2s"},   // 并行发出，不阻塞规则匹配
+{"action":"evaluate","server":"remote-dns","tag":"remote-answer"},
+{"match_response":true,"race":true,"rule_set":["lancidr","cncidr"],"action":"respond"},
+{"match_response":"remote-answer","action":"respond"}
+```
+
+- 第三条带 `race`：本地一答复就判，**答案落在 CN/内网 IP 段就立刻返回**（实测 78ms，而不是等远端超时的 5s）。
+- 本地答案不是国内 IP（或解析失败）时第三条不匹配，落到第四条等远端那份——这才是要代理的流量。
+- 第四条**故意不加 `race`**：加了就变成"远端先到就用远端"，会把本来就该直连的国内站点推去代理。
+- `race` 与 `speculative` 互斥，且必须配 `match_response`（否则 sing-box 拒绝启动），所以这里不用 `speculative`。
+- 两条 `evaluate` 必须排在 `race` 规则之前：`evaluate` 只有在"后面还有 pending 的 race 规则"时才会立即发出，顺序换了就退化成串行。
+- 本机实测（`clash_api` 的 `/dns/query`）：`www.baidu.com` → `183.2.172.177`（60ms，本地答）；`www.google.com` → `198.18.0.2`（fakeip，20ms）；`www.cac.gov.cn` → 本地真实 IP；未命中的 `example.com` 走并发分支。
+
+**已删除/替换的参数**（用户要求：不用将来会被弃用的写法）：
+
+| 旧 | 新 | 原因 |
+|---|---|---|
+| `tun.stack: "mixed"` | 删掉 | 1.15 弃用、1.17 移除；删掉即用当前默认栈 |
+| DNS 规则的 `strategy` | `dns.strategy` / 服务器级 `strategy` | 1.14 弃用 |
+| `download_detour` | `http_clients` + `default_http_client` | 1.14 弃用 |
+| `independent_cache` | -- | 1.14 弃用 |
+| `store_rdrc` | -- | 1.14 弃用 |
+| 无 `match_response` 的 `ip_cidr`/`ip_is_private`/`ip_accept_empty` | `match_response: true` | 1.14 弃用（1.16 移除） |
 
 ### 让 Docker 容器也走代理（仅 Linux 服务器）
 
@@ -234,7 +275,7 @@ sudo /usr/local/bin/sbc-update.sh
 |---|---|
 | 加一条自定义域名/进程规则 | `rules/custom/*.yaml`（`domain` / `domain_suffix` / `domain_keyword` / `domain_regex` / `ip_cidr` / `process_name`） |
 | 换某个模块的数据源 | `rules/modules.yaml` 的 `sources` |
-| 调整规则顺序或目标组 | `rules/order.yaml`（目标只允许 `reject` / `direct` / `proxies` / `f1tv`） |
+| 调整规则顺序或目标组 | `rules/order.yaml`（目标只允许 `reject` / `direct` / `proxies` / `f1tv`；`reject` 仍支持，但当前没有模块用它） |
 | 加国家/地区组 | `config/regions.yaml` 加一行（有节点才生成） |
 | 换客户端参数（端口/MTU/DNS） | `templates/mihomo.yaml.tpl` / `templates/singbox.json.tpl` |
 | 改分组逻辑（默认项、成员顺序） | `lib/grouping.mjs`（两份脚本由它生成） |

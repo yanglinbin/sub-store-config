@@ -2,23 +2,22 @@
 # 设计要点：**先把域名类判完，再交给 IP 类**
 #   - 域名命中的连接不会强制解析（快），也不会把代理域名送去本地 DNS（少泄露）
 #   - 被污染解析到国内 IP 的代理域名（proxy/gfw/google）不会再被 cncidr 抢成直连
-#   - IP 兜底只剩「哪张域名表都没进、但确实解析到 CN 内网/CN IP」的流量
+#   - IP 兜底只剩「哪张域名表都没进」的流量；这类流量的域名解析交给 DNS 里的 race 决定
 - { module: subscription,      target: proxies }   # 1 机场面板/订阅域名（上游误判为直连，必须最先）
 - { module: selfhost,          target: direct }    # 2 自有域名（yilabao.top）直连
-- { module: category-ads-all,  target: reject }    # 3 广告/跟踪（域名）
-- { module: private,           target: direct }    # 2 内网域名
-- { module: f1tv,              target: f1tv }      # 3
-- { module: microsoft,         target: direct }    # 4
-- { module: apple,             target: direct }    # 5
-- { module: icloud,            target: direct }    # 6
-- { module: steam,             target: direct }    # 7
-- { module: applications,      target: direct }    # 8 进程直连
-- { module: google,            target: proxies }   # 9 Google 大陆可连域名 → 代理
-- { module: gfw,               target: proxies }   # 10
-- { module: direct,            target: direct }    # 11 CN 域名
-- { module: proxy,             target: proxies }   # 12 其余海外域名
+- { module: private,           target: direct }    # 3 内网域名
+- { module: f1tv,              target: f1tv }      # 4
+- { module: microsoft,         target: direct }    # 5
+- { module: apple,             target: direct }    # 6
+- { module: icloud,            target: direct }    # 7
+- { module: steam,             target: direct }    # 8
+- { module: applications,      target: direct }    # 9 进程直连
+- { module: google,            target: proxies }   # 10 Google 大陆可连域名 → 代理
+- { module: gfw,               target: proxies }   # 11
+- { module: direct,            target: direct }    # 12 CN 域名
+- { module: proxy,             target: proxies }   # 13 其余海外域名
 # ↓ 此处会自动插入 sing-box 的 {action: resolve, server: local-dns}
-- { module: lancidr,           target: direct }    # 13 内网 IP
-- { module: cncidr,            target: direct }    # 14 CN IP
-- { module: telegramcidr,      target: proxies }   # 15
+- { module: lancidr,           target: direct }    # 14 内网 IP
+- { module: cncidr,            target: direct }    # 15 CN IP
+- { module: telegramcidr,      target: proxies }   # 16
 # 未命中 → final（默认 proxies）

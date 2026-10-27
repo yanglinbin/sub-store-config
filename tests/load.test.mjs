@@ -47,7 +47,7 @@ test('非法 behavior 抛错', () => {
 
 test('loadAll 读通仓库真实配置', () => {
   const { regions, modules, order } = loadAll();
-  assert.equal(order.length, 17);
-  assert.equal(Object.keys(modules).length, 17);
+  assert.equal(order.length, 16);
+  assert.equal(Object.keys(modules).length, 16);
   assert.ok(regions.every((r) => Array.isArray(r.keywords) && r.keywords.length > 0));
 });

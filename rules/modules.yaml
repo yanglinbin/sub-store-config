@@ -4,9 +4,6 @@
 #   behavior→ domain | ipcidr | classical（决定 mihomo rule-provider 类型）
 
 # ============ 上游（clash-rules） ============
-category-ads-all:
-  behavior: domain
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"]
 private:
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"]

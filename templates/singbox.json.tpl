@@ -7,12 +7,8 @@
       { "type": "https", "tag": "remote-dns", "server": "1.1.1.1", "path": "/dns-query", "detour": "proxies" },
       { "type": "fakeip", "tag": "fakeip", "inet4_range": "198.18.0.0/15", "inet6_range": "fc00::/18" }
     ],
-    "rules": [
-      { "domain_suffix": [".lan", ".local", ".direct", ".localhost"], "server": "local-dns" },
-      { "domain_suffix": ["time.windows.com", "time.apple.com", "time.nist.gov", "pool.ntp.org", "ntp.aliyun.com", "ntp.tencent.com"], "server": "local-dns" },
-      { "query_type": ["A", "AAAA"], "server": "fakeip" }
-    ],
-    "final": "remote-dns",
+    "rules": {{DNS_RULES}},
+    "final": "local-dns",
     "strategy": "prefer_ipv4"
   },
   "inbounds": [
@@ -22,7 +18,6 @@
       "address": ["10.66.0.1/30", "fdfe:dcba:9876::1/126"],
       "auto_route": true,
       "strict_route": true,
-      "stack": "mixed",
       "mtu": 1400
     },
     { "type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": 7890 }

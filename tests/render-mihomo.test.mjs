@@ -18,14 +18,14 @@ test('全局字段与 spec 一致', () => {
 
 test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格式', () => {
   const c = render();
-  assert.equal(Object.keys(c['rule-providers']).length, 17);
+  assert.equal(Object.keys(c['rule-providers']).length, loadAll().order.length);
 
-  assert.deepEqual(c['rule-providers']['category-ads-all'], {
+  assert.deepEqual(c['rule-providers'].private, {
     type: 'http',
     behavior: 'domain',
     format: 'text',
-    url: `${BASE}/mihomo/rules/category-ads-all.list`,
-    path: './ruleset/category-ads-all.yaml',
+    url: `${BASE}/mihomo/rules/private.list`,
+    path: './ruleset/private.yaml',
     interval: 86400,
   });
   assert.equal(c['rule-providers'].cncidr.behavior, 'ipcidr');
@@ -40,7 +40,6 @@ test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
   assert.deepEqual(c.rules, [
     'RULE-SET,subscription,proxies',
     'RULE-SET,selfhost,direct',
-    'RULE-SET,category-ads-all,REJECT',
     'RULE-SET,private,direct',
     'RULE-SET,f1tv,f1tv',
     'RULE-SET,microsoft,direct',
