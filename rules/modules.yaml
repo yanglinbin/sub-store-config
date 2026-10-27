@@ -45,6 +45,9 @@ subscription:       # 机场面板/订阅域名：上游 direct.txt 误判为直
 selfhost:           # 自有域名（yilabao.top）：Sub-Store / 自建服务一律直连
   behavior: domain
   custom: rules/custom/selfhost.yaml
+foreign-cn:         # 境外地理但在 .cn 下的域名：被 direct 的裸 `cn` 通配吞掉，这里提前改判 proxies
+  behavior: domain
+  custom: rules/custom/foreign-cn.yaml
 microsoft:
   behavior: classical
   custom: rules/custom/microsoft.yaml

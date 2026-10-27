@@ -14,10 +14,11 @@
 - { module: applications,      target: direct }    # 9 进程直连
 - { module: google,            target: proxies }   # 10 Google 大陆可连域名 → 代理
 - { module: gfw,               target: proxies }   # 11
-- { module: direct,            target: direct }    # 12 CN 域名
-- { module: proxy,             target: proxies }   # 13 其余海外域名
+- { module: foreign-cn,        target: proxies }   # 12 境外地理的 .cn 域名（否则被 direct 的裸 cn 通配吞掉）
+- { module: direct,            target: direct }    # 13 CN 域名
+- { module: proxy,             target: proxies }   # 14 其余海外域名
 # ↓ 此处会自动插入 sing-box 的 {action: resolve, server: local-dns}
-- { module: lancidr,           target: direct }    # 14 内网 IP
-- { module: cncidr,            target: direct }    # 15 CN IP
-- { module: telegramcidr,      target: proxies }   # 16
+- { module: lancidr,           target: direct }    # 15 内网 IP
+- { module: cncidr,            target: direct }    # 16 CN IP
+- { module: telegramcidr,      target: proxies }   # 17
 # 未命中 → final（默认 proxies）

@@ -1,0 +1,57 @@
+# 上游 proxy.txt（geolocation-!cn）里以 .cn 结尾的域名
+# 陷阱：direct.txt 里有一条裸 cn 通配（domain_suffix: cn），而 direct 在 order 里排在 proxy 之前，
+# 于是下面这 48 个"境外地理位置"的域名会被当成国内域名直连（services.googleapis.cn 就是这么中招的）。
+# 本模块挂在 direct 之前，把它们改判 proxies。
+# 来源：proxy 规则集里所有 *.cn 条目。上游更新后重新比对补条目：
+#   sing-box rule-set decompile dist/singbox/rules/proxy.srs -o /tmp/proxy.json
+#   # 取所有 endswith('.cn') 的 domain_suffix，与下面的列表做差集
+domain_suffix:
+  - 666pool.cn
+  - airbnb.cn
+  - amd.com.cn
+  - arphic.com.cn
+  - bloomberg.cn
+  - daxa.cn
+  - drweb.cn
+  - dungeonkeeper.cn
+  - dungeonkeeper.com.cn
+  - dynacw.com.cn
+  - ebayauthenticate.com.cn
+  - entrust.cn
+  - futu.cn
+  - futubull.cn
+  - google.cn
+  - googleapis.cn
+  - hewlett-packard.com.cn
+  - hsbc.com.cn
+  - hsbcinsurance.com.cn
+  - hsbcqh.com.cn
+  - intel.com.cn
+  - intelrealsense.cn
+  - jinrieluosi.cn
+  - lightnovel.cn
+  - logitech.com.cn
+  - logitechg.com.cn
+  - logitechio.com.cn
+  - longbridge.cn
+  - longportapp.cn
+  - msi.cn
+  - mucinex.cn
+  - mucinex.com.cn
+  - qualcommventures.cn
+  - reutersagency.cn
+  - schwab.com.cn
+  - services.googleapis.cn
+  - skytigris.cn
+  - snapdragon.cn
+  - sourcingforebay.com.cn
+  - thomsonreuters.cn
+  - tigerbbs.cn
+  - uupool.cn
+  - verisign.com.cn
+  - xn--ztsq84g.cn
+  - zhijianfengyi.cn
+  - zmw.cn
+  - zoom.com.cn
+domain:
+  - scholar.google.cn

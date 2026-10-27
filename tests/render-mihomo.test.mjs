@@ -49,6 +49,7 @@ test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
     'RULE-SET,applications,direct',
     'RULE-SET,google,proxies',
     'RULE-SET,gfw,proxies',
+    'RULE-SET,foreign-cn,proxies',
     'RULE-SET,direct,direct',
     'RULE-SET,proxy,proxies',
     'RULE-SET,lancidr,direct',

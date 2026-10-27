@@ -12,7 +12,7 @@
 
 ---
 
-## 规则集（16 个模块）
+## 规则集（17 个模块）
 
 | # | 模块 | 来源 | 类型 | → 组 |
 |---|---|---|---|---|
@@ -27,11 +27,20 @@
 | 9 | `applications` | clash-rules（98 条进程） | classical | direct |
 | 10 | `google` | clash-rules **`google.txt`**（112 条，大陆可连的 Google 域名） | domain | **proxies** |
 | 11 | `gfw` | clash-rules `gfw.txt` | domain | **proxies** |
-| 12 | `direct` | clash-rules `direct.txt` | domain | direct |
-| 13 | `proxy` | clash-rules `proxy.txt` | domain | **proxies** |
-| 14 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
-| 15 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
-| 16 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
+| 12 | `foreign-cn` | 自建（proxy 里所有 `*.cn`） | domain | **proxies** |
+| 13 | `direct` | clash-rules `direct.txt` | domain | direct |
+| 14 | `proxy` | clash-rules `proxy.txt` | domain | **proxies** |
+| 15 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
+| 16 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
+| 17 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
+
+**`foreign-cn` 存在的理由（一个真实踩过的坑）**：`direct.txt` 里有一条**裸 `cn` 通配**（`domain_suffix: cn`），
+而 `direct` 排在 `proxy` 之前。于是 `proxy.txt` 里那些"境外地理位置、但注册在 .cn 下"的域名
+（`services.googleapis.cn`、`airbnb.cn`、`zoom.com.cn`、`bloomberg.cn` …共 48 个）会被 `cn` 通配抢走、当成直连。
+`rules/custom/foreign-cn.yaml` 把这些域名在 `direct` 之前改判 `proxies`。链路实测：
+`services.googleapis.cn:443` → `match[13] rule_set=foreign-cn => route(proxies)`，同时 `www.baidu.com` / `alibabacloud.com` 仍 `route(direct)`。
+注：这是"精确列表压过 TLD 通配"，不是把 `proxy` 整体提到 `direct` 前面——两张表有 117 条完全重叠的国内域名
+（`alibabacloud.com`、`cnpmjs.org`、`265.com` …），整体提上去会把它们一并推去代理。
 
 
 未命中 → `final` 组。**两端都有兜底**：mihomo 末尾追加 `MATCH,final`，sing-box 用 `route.final: "final"`。

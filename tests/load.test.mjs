@@ -47,7 +47,15 @@ test('非法 behavior 抛错', () => {
 
 test('loadAll 读通仓库真实配置', () => {
   const { regions, modules, order } = loadAll();
-  assert.equal(order.length, 16);
-  assert.equal(Object.keys(modules).length, 16);
+  assert.equal(order.length, 17);
+  assert.equal(Object.keys(modules).length, 17);
   assert.ok(regions.every((r) => Array.isArray(r.keywords) && r.keywords.length > 0));
+});
+
+test('foreign-cn 必须排在 direct 之前，否则被 direct 的裸 cn 通配吞掉', () => {
+  const { order } = loadAll();
+  const idx = (m) => order.findIndex((x) => x.module === m);
+  assert.ok(idx('foreign-cn') > -1, 'foreign-cn 模块必须在 order 里');
+  assert.ok(idx('foreign-cn') < idx('direct'));
+  assert.equal(order[idx('foreign-cn')].target, 'proxies');
 });
