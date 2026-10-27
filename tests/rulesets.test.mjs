@@ -166,3 +166,59 @@ test('countEntries 统计的是规则条数而不是模块数', async () => {
   });
   assert.equal(countEntries(distDir), 3);
 });
+
+test('derive 模块 = 两个来源模块按 type+value 的交集', async () => {
+  const root = fixture();
+  const distDir = join(root, 'dist');
+  await writeRuleSets({
+    rootDir: root,
+    distDir,
+    modules: {
+      a: { behavior: 'domain', sources: ['https://x/a.txt'] },
+      b: { behavior: 'domain', sources: ['https://x/b.txt'] },
+      pin: { behavior: 'domain', derive: { intersect: ['a', 'b'] } },
+    },
+    order: [
+      { module: 'a', target: 'direct' },
+      { module: 'pin', target: 'direct' },
+      { module: 'b', target: 'proxies' },
+    ],
+    fetcher: fakeFetcher({
+      'https://x/a.txt': 'DOMAIN,both.com\nDOMAIN-SUFFIX,shared.net\nDOMAIN,only-a.com',
+      'https://x/b.txt': 'DOMAIN,only-b.com\nDOMAIN,both.com',
+    }),
+  });
+  const pin = JSON.parse(readFileSync(join(distDir, 'singbox/rules/pin.json'), 'utf8'));
+  assert.deepEqual(pin, { version: 3, rules: [{ domain: ['both.com'] }] });
+  // 类型不同不算重复：a 的 DOMAIN-SUFFIX,shared.net 在 b 里没有同类型条目
+  const list = readFileSync(join(distDir, 'mihomo/rules/pin.list'), 'utf8');
+  assert.equal(list, 'both.com\n');
+});
+
+test('derive 模块的来源缺失时点名报错', async () => {
+  const root = fixture();
+  await assert.rejects(
+    () =>
+      writeRuleSets({
+        rootDir: root,
+        distDir: join(root, 'dist'),
+        modules: {
+          a: { behavior: 'domain', sources: ['https://x/a.txt'] },
+          pin: { behavior: 'domain', derive: { intersect: ['a', 'gone'] } },
+        },
+        order: [
+          { module: 'a', target: 'direct' },
+          { module: 'pin', target: 'direct' },
+        ],
+        fetcher: fakeFetcher({ 'https://x/a.txt': 'DOMAIN,a.com' }),
+      }),
+    /"gone" 没有构建产物/,
+  );
+});
+
+test('buildRuleSet 直接调用 derive 模块时报错（必须先构建来源）', async () => {
+  await assert.rejects(
+    () => buildRuleSet('pin', { behavior: 'domain', derive: { intersect: ['a', 'b'] } }, { fetcher: fakeFetcher({}) }),
+    /derive/,
+  );
+});

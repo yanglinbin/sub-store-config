@@ -14,6 +14,9 @@ export async function buildRuleSet(name, mod, { rootDir = process.cwd(), fetcher
   if (mod.kind === 'remote') {
     throw new Error(`module "${name}" 是 kind=remote，不应调用 buildRuleSet`);
   }
+  if (mod.derive) {
+    throw new Error(`module "${name}" 是 derive 模块，需要先构建其来源模块`);
+  }
   const at = (p) => (isAbsolute(p) ? p : resolve(rootDir, p));
   const defaultType = DEFAULT_TYPE_OF[mod.behavior];
   if (!defaultType) throw new Error(`module "${name}" 的 behavior 非法: ${mod.behavior}`);
@@ -58,13 +61,41 @@ export async function writeRuleSets({
 
   const written = [];
   const done = new Set();
+
+  // 第一趟：构建所有实体模块（sources / custom），derive 模块留到第二趟
+  const built = new Map();
   for (const entry of order) {
     if (done.has(entry.module)) continue;
     done.add(entry.module);
     const mod = modules[entry.module];
     if (!mod) throw new Error(`order 引用了不存在的模块: ${entry.module}`);
     if (mod.kind === 'remote') continue; // IP 类直接引官方产物，不落盘
-    const { entries } = await buildRuleSet(entry.module, mod, { rootDir, fetcher });
+    if (mod.derive) continue;
+    built.set(entry.module, await buildRuleSet(entry.module, mod, { rootDir, fetcher }));
+  }
+
+  // 第二趟：derive 模块从已构建的来源模块做集合运算
+  for (const [name, mod] of Object.entries(modules)) {
+    if (!mod.derive) continue;
+    const [left, right] = mod.derive.intersect;
+    const a = built.get(left);
+    const b = built.get(right);
+    if (!a) throw new Error(`derive 模块 "${name}" 的来源 "${left}" 没有构建产物（必须是本仓库的实体模块且在 order 中）`);
+    if (!b) throw new Error(`derive 模块 "${name}" 的来源 "${right}" 没有构建产物（必须是本仓库的实体模块且在 order 中）`);
+    const keyOf = (e) => `${e.type} ${e.value}`;
+    const inRight = new Set(b.entries.map(keyOf));
+    built.set(name, { name, behavior: mod.behavior, entries: a.entries.filter((e) => inRight.has(keyOf(e))) });
+  }
+
+  // 第三趟：按 order 写盘
+  for (const entry of order) {
+    if (alreadyWritten(entry.module, written)) continue;
+    const mod = modules[entry.module];
+    if (!mod) throw new Error(`order 引用了不存在的模块: ${entry.module}`);
+    if (mod.kind === 'remote') continue; // IP 类直接引官方产物，不落盘
+    const ruleSet = built.get(entry.module);
+    if (!ruleSet) throw new Error(`模块 "${entry.module}" 没有构建产物`);
+    const entries = ruleSet.entries;
 
     writeFileSync(join(jsonDir, `${entry.module}.json`), JSON.stringify(toHeadless(entries), null, 2) + '\n');
 
@@ -75,6 +106,11 @@ export async function writeRuleSets({
     written.push(`singbox/rules/${entry.module}.json`, `mihomo/rules/${entry.module}.list`);
   }
   return written;
+}
+
+/** 写盘去重（同一模块在 order 里只应出现一次，这里只是防御） */
+function alreadyWritten(name, written) {
+  return written.includes(`singbox/rules/${name}.json`);
 }
 
 /**

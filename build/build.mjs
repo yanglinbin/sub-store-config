@@ -7,12 +7,19 @@ import { renderMihomo } from './render-mihomo.mjs';
 import { renderSingbox } from './render-singbox.mjs';
 import { emitScripts } from './emit-script.mjs';
 import { compileSrs } from './compile-srs.mjs';
-import { validateDist } from './validate.mjs';
+import { validateDist, checkOrderInvariants } from './validate.mjs';
 
 const BASE_URL = process.env.BASE_URL || 'https://cdn.jsdelivr.net/gh/yanglinbin/sub-store-config@dist';
 const DIST = 'dist';
 
 const { regions, modules, order } = loadAll();
+
+// 顺序不变量：proxy 必须在 direct 前、derive 必须在其来源前、overrides 必须第一
+const invariantProblems = checkOrderInvariants(order, modules);
+if (invariantProblems.length > 0) {
+  for (const p of invariantProblems) console.error('✖', p);
+  process.exit(1);
+}
 const fetcher = createFetcher({
   cacheDir: '.cache',
   onWarn: (url, err) => console.warn(`[warn] 上游拉取失败，使用缓存: ${url} (${err.message})`),
@@ -48,6 +55,8 @@ const scripts = await emitScripts({ outDir: join(DIST, 'scripts') });
 console.log(`[4/5] 脚本 ${scripts.length} 个`);
 
 const remoteModules = Object.values(modules).filter((m) => m.kind === 'remote').length;
+const derivedModules = Object.values(modules).filter((m) => m.derive).length;
+const moduleEntries = countEntriesByModule(DIST);
 // inputs 是上游文本指纹（fetch 层记的 sha256），moduleEntries 是每个模块实际落地多少条
 writeFileSync(
   join(DIST, 'build-info.json'),
@@ -55,9 +64,17 @@ writeFileSync(
     {
       builtAt: new Date().toISOString(),
       baseUrl: BASE_URL,
-      counts: { modules: order.length, remoteModules, builtModules: order.length - remoteModules, builtEntries: countEntries(DIST), files: rulesetFiles.length },
+      counts: {
+        modules: order.length,
+        remoteModules,
+        derivedModules,
+        builtModules: order.length - remoteModules - derivedModules,
+        builtEntries: countEntries(DIST),
+        pinnedEntries: moduleEntries['direct-pinned'] ?? 0,
+        files: rulesetFiles.length,
+      },
       inputs: fetcher.digests,
-      moduleEntries: countEntriesByModule(DIST),
+      moduleEntries,
     },
     null,
     2,

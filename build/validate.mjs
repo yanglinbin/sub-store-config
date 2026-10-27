@@ -101,6 +101,48 @@ async function checkTemplate(file) {
 }
 
 /**
+ * 顺序不变量（与具体配置绑定的设计约束）：
+ *  - proxy 必须排在 direct 之前：direct.txt 有裸 `cn` 通配，否则 proxy 里的 *.cn 域名会被吞成直连
+ *  - 派生的 direct-pinned 必须同时排在 proxy 与 direct 之前，否则「重复项走直连」不成立
+ *  - overrides 必须排第一：它是人工覆盖层，要压过所有上游规则集
+ */
+export function checkOrderInvariants(order, modules) {
+  const problems = [];
+  const idx = (name) => order.findIndex((e) => e.module === name);
+  const targetOf = (name) => order.find((e) => e.module === name)?.target;
+
+  if (idx('proxy') === -1 || idx('direct') === -1) {
+    problems.push('order 必须同时包含 proxy 与 direct');
+    return problems;
+  }
+  if (idx('proxy') > idx('direct')) {
+    problems.push('proxy 必须排在 direct 之前（否则 proxy 里的 *.cn 域名会被 direct 的裸 cn 通配吞成直连）');
+  }
+
+  for (const [name, mod] of Object.entries(modules)) {
+    if (!mod.derive) continue;
+    const i = idx(name);
+    if (i === -1) continue; // 未进 order 的模块由 loadOrder 的交叉校验报
+    for (const dep of mod.derive.intersect) {
+      if (idx(dep) === -1) {
+        problems.push(`derive 模块 "${name}" 的来源 "${dep}" 不在 order 中`);
+      } else if (i > idx(dep)) {
+        problems.push(`derive 模块 "${name}" 必须排在其来源 "${dep}" 之前（否则来源先命中，派生失效）`);
+      }
+    }
+  }
+
+  if (idx('direct-pinned') !== -1 && targetOf('direct-pinned') !== 'direct') {
+    problems.push('direct-pinned 的 target 必须是 direct');
+  }
+  if (idx('overrides') !== -1) {
+    if (idx('overrides') !== 0) problems.push('overrides 必须是 order 的第一条');
+    if (targetOf('overrides') !== 'proxies') problems.push('overrides 的 target 必须是 proxies');
+  }
+  return problems;
+}
+
+/**
  * 校验 dist：语义 diff（两端规则序列）+ rule_set/rule-provider 的 url↔format 一致性
  * + sing-box rule-set 可编译 + 模板可启动。
  * skipBinaries=true 时跳过 sing-box 相关检查（单测用）。

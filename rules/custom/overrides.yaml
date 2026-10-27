@@ -1,0 +1,11 @@
+# 手动覆盖清单：排在最前面，压过所有上游规则集
+#
+# 用法：日常使用时发现某个域名「该走代理却走了直连」（打不开、或者开了代理才能用），
+# 在下面加一行，然后构建/同步一次即可生效。
+#
+# 典型来源是 direct 与 proxy 两张上游表的重复项：这些重复项统一走直连（见 direct-pinned），
+# 其中个别实际打不开的，抄到这里的 domain_suffix 下即可改判代理。
+#
+# 只支持 domain / domain_suffix（本模块 behavior: domain）。想按关键词或正则匹配，
+# 把 modules.yaml 里 overrides 的 behavior 改成 classical，再按对应字段填写。
+domain_suffix: []

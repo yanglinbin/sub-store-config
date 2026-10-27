@@ -39,15 +39,19 @@ proxy:
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"]
 
 # ============ 自建（仓库内维护） ============
+overrides:          # 日常使用中「该代理却没走代理」的域名：手动清单，排在最前压过一切
+  behavior: domain
+  custom: rules/custom/overrides.yaml
 subscription:       # 机场面板/订阅域名：上游 direct.txt 误判为直连，这里改判 proxies
   behavior: domain
   custom: rules/custom/subscription.yaml
 selfhost:           # 自有域名（yilabao.top）：Sub-Store / 自建服务一律直连
   behavior: domain
   custom: rules/custom/selfhost.yaml
-foreign-cn:         # 境外地理但在 .cn 下的域名：被 direct 的裸 `cn` 通配吞掉，这里提前改判 proxies
+direct-pinned:      # direct 与 proxy 的重复项：上游两张表自相矛盾，统一直连（构建期派生，不手抄）
   behavior: domain
-  custom: rules/custom/foreign-cn.yaml
+  derive:
+    intersect: [direct, proxy]
 microsoft:
   behavior: classical
   custom: rules/custom/microsoft.yaml

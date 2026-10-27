@@ -1,24 +1,32 @@
 # 顺序即生效顺序
-# 设计要点：**先把域名类判完，再交给 IP 类**
-#   - 域名命中的连接不会强制解析（快），也不会把代理域名送去本地 DNS（少泄露）
-#   - 被污染解析到国内 IP 的代理域名（proxy/gfw/google）不会再被 cncidr 抢成直连
-#   - IP 兜底只剩「哪张域名表都没进」的流量；这类流量的域名解析交给 DNS 里的 race 决定
-- { module: subscription,      target: proxies }   # 1 机场面板/订阅域名（上游误判为直连，必须最先）
-- { module: selfhost,          target: direct }    # 2 自有域名（yilabao.top）直连
-- { module: private,           target: direct }    # 3 内网域名
-- { module: f1tv,              target: f1tv }      # 4
-- { module: microsoft,         target: direct }    # 5
-- { module: apple,             target: direct }    # 6
-- { module: icloud,            target: direct }    # 7
-- { module: steam,             target: direct }    # 8
-- { module: applications,      target: direct }    # 9 进程直连
-- { module: google,            target: proxies }   # 10 Google 大陆可连域名 → 代理
-- { module: gfw,               target: proxies }   # 11
-- { module: foreign-cn,        target: proxies }   # 12 境外地理的 .cn 域名（否则被 direct 的裸 cn 通配吞掉）
-- { module: direct,            target: direct }    # 13 CN 域名
-- { module: proxy,             target: proxies }   # 14 其余海外域名
+# 设计要点：
+#   1) **域名类先判完，再交给 IP 类**
+#      - 域名命中的连接不会强制解析（快），也不会把代理域名送去本地 DNS（少泄露）
+#      - 被污染解析到国内 IP 的代理域名不会再被 cncidr 抢成直连
+#      - IP 兜底只剩「哪张域名表都没进」的流量；这类流量的域名解析交给 DNS 里的 race 决定
+#   2) **proxy 排在 direct 之前**：direct.txt 有一条裸 `cn` 通配，若 direct 在前，
+#      proxy 里那些「境外地理但注册在 .cn」的域名（services.googleapis.cn、airbnb.cn…）会被吞成直连。
+#      靠顺序而不是域名例外清单（以前的 foreign-cn）根治这一类。
+#   3) **重复项统一走直连**：direct 与 proxy 有重叠（上游自相矛盾），direct-pinned 在构建期
+#      算交集并排在 proxy 之前，行为不随上游变动而漂移。日常发现重复项里某个实际打不开时，
+#      把它加进 rules/custom/overrides.yaml（排在最前，压过一切）。
+- { module: overrides,        target: proxies }   # 1 手动覆盖（发现该代理却没代理的域名）
+- { module: subscription,      target: proxies }   # 2 机场面板/订阅域名（上游误判为直连，必须最先）
+- { module: selfhost,          target: direct }    # 3 自有域名（yilabao.top）直连
+- { module: private,           target: direct }    # 4 内网域名
+- { module: f1tv,              target: f1tv }      # 5
+- { module: microsoft,         target: direct }    # 6
+- { module: apple,             target: direct }    # 7
+- { module: icloud,            target: direct }    # 8
+- { module: steam,             target: direct }    # 9
+- { module: applications,      target: direct }    # 10 进程直连
+- { module: google,            target: proxies }   # 11 Google 大陆可连域名 → 代理
+- { module: gfw,               target: proxies }   # 12
+- { module: direct-pinned,     target: direct }    # 13 direct∩proxy 的重复项 → 直连
+- { module: proxy,             target: proxies }   # 14 其余海外域名（必须在 direct 之前）
+- { module: direct,            target: direct }    # 15 CN 域名（兜底）
 # ↓ 此处会自动插入 sing-box 的 {action: resolve, server: local-dns}
-- { module: lancidr,           target: direct }    # 15 内网 IP
-- { module: cncidr,            target: direct }    # 16 CN IP
-- { module: telegramcidr,      target: proxies }   # 17
+- { module: lancidr,           target: direct }    # 16 内网 IP
+- { module: cncidr,            target: direct }    # 17 CN IP
+- { module: telegramcidr,      target: proxies }   # 18
 # 未命中 → final（默认 proxies）

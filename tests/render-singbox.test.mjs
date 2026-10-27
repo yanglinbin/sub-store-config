@@ -20,7 +20,7 @@ test('rule_set 按 order 顺序、url 指向 .srs、format=binary', () => {
     loadAll().order.map((o) => o.module),
   );
   assert.equal(c.route.rule_set.length, loadAll().order.length);
-  assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/subscription.srs`);
+  assert.equal(c.route.rule_set[0].url, `${BASE}/singbox/rules/overrides.srs`);
   assert.equal(c.route.rule_set[0].format, 'binary');
   assert.equal(c.route.rule_set[0].update_interval, '1d');
 });
@@ -41,9 +41,18 @@ test('route 规则与 order 一致', () => {
 
   const routeRules = c.route.rules.filter((r) => r.rule_set);
   assert.equal(routeRules.length, loadAll().order.length);
-  assert.deepEqual(routeRules[0], { rule_set: 'subscription', action: 'route', outbound: 'proxies' });
-  assert.deepEqual(routeRules[1], { rule_set: 'selfhost', action: 'route', outbound: 'direct' });
-  assert.deepEqual(routeRules[2], { rule_set: 'private', action: 'route', outbound: 'direct' });
+  assert.deepEqual(routeRules[0], { rule_set: 'overrides', action: 'route', outbound: 'proxies' });
+  assert.deepEqual(routeRules[1], { rule_set: 'subscription', action: 'route', outbound: 'proxies' });
+  assert.deepEqual(routeRules[2], { rule_set: 'selfhost', action: 'route', outbound: 'direct' });
+  assert.deepEqual(routeRules[3], { rule_set: 'private', action: 'route', outbound: 'direct' });
+  // proxy 在 direct 之前：靠顺序而非域名例外清单解决 *.cn 误判
+  const idxProxy = routeRules.findIndex((r) => r.rule_set === 'proxy');
+  const idxDirect = routeRules.findIndex((r) => r.rule_set === 'direct');
+  assert.ok(idxProxy > -1 && idxProxy < idxDirect, 'proxy 必须在 direct 之前');
+  // direct-pinned 在 proxy 之前，且在 resolve 之前
+  const idxPinned = routeRules.findIndex((r) => r.rule_set === 'direct-pinned');
+  assert.ok(idxPinned > -1 && idxPinned < idxProxy);
+  assert.ok(routeRules.findIndex((r) => r.rule_set === 'direct-pinned') < idxResolve);
   assert.equal(c.route.rules.filter((r) => r.action === 'reject').length, 0, '广告拦截已按用户要求删除');
   assert.deepEqual(
     routeRules.find((r) => r.rule_set === 'gfw'),

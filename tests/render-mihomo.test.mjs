@@ -38,6 +38,7 @@ test('rule-providers：全部来自 clash-rules 构建产物，且用 text 格�
 test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
   const c = render();
   assert.deepEqual(c.rules, [
+    'RULE-SET,overrides,proxies',
     'RULE-SET,subscription,proxies',
     'RULE-SET,selfhost,direct',
     'RULE-SET,private,direct',
@@ -49,9 +50,9 @@ test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
     'RULE-SET,applications,direct',
     'RULE-SET,google,proxies',
     'RULE-SET,gfw,proxies',
-    'RULE-SET,foreign-cn,proxies',
-    'RULE-SET,direct,direct',
+    'RULE-SET,direct-pinned,direct',
     'RULE-SET,proxy,proxies',
+    'RULE-SET,direct,direct',
     'RULE-SET,lancidr,direct',
     'RULE-SET,cncidr,direct',
     'RULE-SET,telegramcidr,proxies',

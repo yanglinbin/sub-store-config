@@ -12,35 +12,41 @@
 
 ---
 
-## 规则集（17 个模块）
+## 规则集（18 个模块）
 
 | # | 模块 | 来源 | 类型 | → 组 |
 |---|---|---|---|---|
-| 1 | `subscription` | 自建 | domain | **proxies** |
-| 2 | `selfhost` | 自建 | domain | direct |
-| 3 | `private` | clash-rules `private.txt` | domain | direct |
-| 4 | `f1tv` | 自建 | classical | **f1tv** |
-| 5 | `microsoft` | 自建（含 2 条 KEYWORD） | classical | direct |
-| 6 | `apple` | clash-rules `apple.txt` | domain | direct |
-| 7 | `icloud` | clash-rules `icloud.txt` | domain | direct |
-| 8 | `steam` | 自建（4 域名 + 40 CIDR） | classical | direct |
-| 9 | `applications` | clash-rules（98 条进程） | classical | direct |
-| 10 | `google` | clash-rules **`google.txt`**（112 条，大陆可连的 Google 域名） | domain | **proxies** |
-| 11 | `gfw` | clash-rules `gfw.txt` | domain | **proxies** |
-| 12 | `foreign-cn` | 自建（proxy 里所有 `*.cn`） | domain | **proxies** |
-| 13 | `direct` | clash-rules `direct.txt` | domain | direct |
+| 1 | `overrides` | 自建（手动覆盖清单） | domain | **proxies** |
+| 2 | `subscription` | 自建 | domain | **proxies** |
+| 3 | `selfhost` | 自建 | domain | direct |
+| 4 | `private` | clash-rules `private.txt` | domain | direct |
+| 5 | `f1tv` | 自建 | classical | **f1tv** |
+| 6 | `microsoft` | 自建（含 2 条 KEYWORD） | classical | direct |
+| 7 | `apple` | clash-rules `apple.txt` | domain | direct |
+| 8 | `icloud` | clash-rules `icloud.txt` | domain | direct |
+| 9 | `steam` | 自建（4 域名 + 40 CIDR） | classical | direct |
+| 10 | `applications` | clash-rules（98 条进程） | classical | direct |
+| 11 | `google` | clash-rules **`google.txt`**（112 条，大陆可连的 Google 域名） | domain | **proxies** |
+| 12 | `gfw` | clash-rules `gfw.txt` | domain | **proxies** |
+| 13 | `direct-pinned` | **构建期派生**（`direct` ∩ `proxy`） | domain | direct |
 | 14 | `proxy` | clash-rules `proxy.txt` | domain | **proxies** |
-| 15 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
-| 16 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
-| 17 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
+| 15 | `direct` | clash-rules `direct.txt` | domain | direct |
+| 16 | `lancidr` | clash-rules `lancidr.txt` | ipcidr | direct |
+| 17 | `cncidr` | clash-rules `cncidr.txt` | ipcidr | direct |
+| 18 | `telegramcidr` | clash-rules `telegramcidr.txt` | ipcidr | **proxies** |
 
-**`foreign-cn` 存在的理由（一个真实踩过的坑）**：`direct.txt` 里有一条**裸 `cn` 通配**（`domain_suffix: cn`），
-而 `direct` 排在 `proxy` 之前。于是 `proxy.txt` 里那些"境外地理位置、但注册在 .cn 下"的域名
-（`services.googleapis.cn`、`airbnb.cn`、`zoom.com.cn`、`bloomberg.cn` …共 48 个）会被 `cn` 通配抢走、当成直连。
-`rules/custom/foreign-cn.yaml` 把这些域名在 `direct` 之前改判 `proxies`。链路实测：
-`services.googleapis.cn:443` → `match[13] rule_set=foreign-cn => route(proxies)`，同时 `www.baidu.com` / `alibabacloud.com` 仍 `route(direct)`。
-注：这是"精确列表压过 TLD 通配"，不是把 `proxy` 整体提到 `direct` 前面——两张表有 117 条完全重叠的国内域名
-（`alibabacloud.com`、`cnpmjs.org`、`265.com` …），整体提上去会把它们一并推去代理。
+**`proxy` 为什么排在 `direct` 之前（一个真实踩过的坑）**：`direct.txt` 里有一条**裸 `cn` 通配**
+（`domain_suffix: cn`），它会吞掉 `proxy.txt` 里那些"境外地理位置、但注册在 .cn 下"的域名
+（`services.googleapis.cn`、`airbnb.cn`、`zoom.com.cn`、`bloomberg.cn` …共 40+ 个）。
+把 `proxy` 整体提到 `direct` 之前，这一类问题**从根上消失**，不需要维护任何域名例外清单。
+
+**`direct-pinned` 解决的是另一半问题**：两张表还有 **117 条完全重叠**的国内域名
+（`alibabacloud.com`、`cnpmjs.org`、`265.com` …），`proxy` 提前后它们会被推去代理。
+所以 `direct-pinned` 在**构建期**算 `direct ∩ proxy` 的精确交集，排在这两张表之前 → 重复项统一走直连。
+它是派生的，不是手抄的：上游明天新增或删掉重复项，`direct-pinned` 自动跟着变（当前 117 条，见 `dist/build-info.json` 的 `counts.pinnedEntries`）。
+
+**日常发现"该代理却没代理"怎么办**：加进 `rules/custom/overrides.yaml`（`domain_suffix` 列表），重新构建/同步即可。
+它排在**第一条**，压过所有上游规则集——专门用来人工兜底，不用改上游、不用调顺序。
 
 
 未命中 → `final` 组。**两端都有兜底**：mihomo 末尾追加 `MATCH,final`，sing-box 用 `route.final: "final"`。

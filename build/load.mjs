@@ -82,6 +82,35 @@ export function loadModules(path) {
     if (def.custom !== undefined && (typeof def.custom !== 'string' || def.custom === '')) {
       throw new Error(`module "${name}" 的 custom 必须是文件路径字符串`);
     }
+    if (def.derive !== undefined) {
+      if (def.sources || def.custom) {
+        throw new Error(`module "${name}" 的 derive 不能与 sources/custom 同时使用`);
+      }
+      const d = def.derive;
+      if (!d || typeof d !== 'object' || Array.isArray(d)) {
+        throw new Error(`module "${name}" 的 derive 必须是对象`);
+      }
+      const keys = Object.keys(d);
+      if (keys.length !== 1 || keys[0] !== 'intersect') {
+        throw new Error(`module "${name}" 的 derive 只支持 intersect（收到: ${keys.join(',') || '空'}）`);
+      }
+      const pair = d.intersect;
+      if (
+        !Array.isArray(pair) ||
+        pair.length !== 2 ||
+        pair.some((m) => typeof m !== 'string' || m === '')
+      ) {
+        throw new Error(`module "${name}" 的 derive.intersect 必须是两个模块名的数组`);
+      }
+      if (pair[0] === pair[1]) {
+        throw new Error(`module "${name}" 的 derive.intersect 两个模块不能相同: ${pair[0]}`);
+      }
+      if (pair.includes(name)) {
+        throw new Error(`module "${name}" 的 derive.intersect 不能引用自己`);
+      }
+      modules[name] = { kind, behavior: def.behavior, derive: { intersect: [...pair] } };
+      continue;
+    }
     modules[name] = {
       kind,
       behavior: def.behavior,
@@ -127,6 +156,17 @@ export function loadAll(rootDir = process.cwd()) {
   for (const [name, mod] of Object.entries(modules)) {
     if (mod.custom && !existsSync(at(mod.custom))) {
       throw new Error(`module "${name}" 的 custom 文件不存在: ${mod.custom}`);
+    }
+    if (!mod.derive) continue;
+    for (const dep of mod.derive.intersect) {
+      const src = modules[dep];
+      if (!src) throw new Error(`module "${name}" 的 derive.intersect 引用了不存在的模块: ${dep}`);
+      if (src.kind === 'remote') {
+        throw new Error(`module "${name}" 的 derive.intersect 不能引用 remote 模块: ${dep}`);
+      }
+      if (src.derive) {
+        throw new Error(`module "${name}" 的 derive.intersect 不能引用另一个 derive 模块: ${dep}`);
+      }
     }
   }
   for (const entry of order) {
