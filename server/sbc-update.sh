@@ -31,8 +31,11 @@ if [ -z "$SUBSTORE_FILE_URL_IPV4" ]; then
     esac
 fi
 CFG=/etc/sing-box/config.json
-CFG_DUAL=/etc/sing-box/config.dual.json   # 双栈主配置（本脚本维护，不直接生效）
-CFG_IPV4=/etc/sing-box/config.ipv4.json   # IPv4-only 主配置（同模板 + 脚本参数 ipv4=1）
+# 两份主配置**不能**放 /etc/sing-box：服务单元用的是 `sing-box -C /etc/sing-box`，
+# 会把该目录下所有 *.json 合并加载 —— 多放一份就是 "duplicate inbound tag: tun-in" 起不来
+CFG_STASH=/var/lib/sbc-update             # 主配置存放目录（700，只有 root 能进）
+CFG_DUAL=$CFG_STASH/config.dual.json      # 双栈主配置（本脚本维护，不直接生效）
+CFG_IPV4=$CFG_STASH/config.ipv4.json      # IPv4-only 主配置（同模板 + 脚本参数 ipv4=1）
 MODE_FILE=/etc/default/sbc-switch         # 记着当前要用哪份：MODE=dual | ipv4
 BAK_GLOB=/etc/sing-box/config.json.bak
 MIN_NODES=5   # 少于这么多个节点说明机场掉线或脚本出错，不能替换
@@ -50,6 +53,8 @@ fail() {
 # IPv4 副本：同一模板加脚本参数 ipv4=1 的产物（tun 只留 v4 地址、fakeip 去掉 inet6_range、
 # dns.strategy=ipv4_only），供 sbc-switch.sh 切换用。
 # 它是副产物：任何一步不过都只告警、保留旧文件，绝不让它挡住双栈主配置的更新。
+mkdir -p "$CFG_STASH" && chmod 700 "$CFG_STASH" || fail "创建 $CFG_STASH 失败"
+
 MODE=dual
 [ -r "$MODE_FILE" ] && . "$MODE_FILE"
 MODE="${MODE:-dual}"
@@ -117,6 +122,11 @@ fi
 
 # 闸 5：语法。sing-box 自己说能加载才算数（还能顺带挡住端口/字段改错）
 sing-box check -c "$TMP" || fail "sing-box check 未通过"
+
+# 闸 6：/etc/sing-box 下只能有 config.json 一个 *.json。服务单元是 `sing-box -C /etc/sing-box`，
+# 会把目录里所有 *.json 合并加载 —— 多放一份就会 "duplicate inbound tag: tun-in" 起不来
+strays=$(find /etc/sing-box -maxdepth 1 -name '*.json' ! -name 'config.json' 2>/dev/null | head -n 5)
+[ -z "$strays" ] || fail "/etc/sing-box 下有额外 *.json（会被 -C 合并加载）：$(echo "$strays" | tr '\n' ' ')"
 
 # ---- 两份主配置都维护：双栈这份就是刚过闸的内容 ----
 install -o root -g sing-box -m 640 "$TMP" "$CFG_DUAL" || fail "写入 $CFG_DUAL 失败"

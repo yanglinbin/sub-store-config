@@ -13,9 +13,10 @@
 set -u
 
 CFG=/etc/sing-box/config.json
-CFG_DUAL=/etc/sing-box/config.dual.json
-CFG_IPV4=/etc/sing-box/config.ipv4.json
-CFG_SWITCHBAK=/etc/sing-box/config.json.switchbak
+CFG_DUAL=/var/lib/sbc-update/config.dual.json
+CFG_IPV4=/var/lib/sbc-update/config.ipv4.json
+# 备份也放 /var/lib/sbc-update：/etc/sing-box 下所有 *.json 都会被 `sing-box -C` 合并加载
+CFG_SWITCHBAK=/var/lib/sbc-update/config.switchbak.json
 MODE_FILE=/etc/default/sbc-switch
 
 fail() {
@@ -60,8 +61,13 @@ install -o root -g sing-box -m 640 "$src" "$CFG" || fail "写入 $CFG 失败"
 printf 'MODE=%s\n' "$want" > "$MODE_FILE" || fail "写入 $MODE_FILE 失败"
 
 systemctl restart sing-box 2>/dev/null
-# Type=simple 的 restart 在 fork 后就返回，等两秒再判活
-sleep 2
+# Type=simple 的 restart 在 fork 后就返回，进程退出要几百毫秒到几秒，逐秒采样最多 10 秒
+i=0
+while [ "$i" -lt 10 ]; do
+    sleep 1
+    i=$((i + 1))
+    systemctl is-active --quiet sing-box || break
+done
 if systemctl is-active --quiet sing-box; then
     echo "[OK] 已切到 $want 模式并重启"
     exit 0
@@ -73,7 +79,12 @@ if [ -f "$CFG_SWITCHBAK" ]; then
     install -o root -g sing-box -m 640 "$CFG_SWITCHBAK" "$CFG" || fail "回滚写入 $CFG 失败"
     printf 'MODE=%s\n' "$prev_mode" > "$MODE_FILE" || true
     systemctl restart sing-box 2>/dev/null
-    sleep 2
+    i=0
+    while [ "$i" -lt 10 ]; do
+        sleep 1
+        i=$((i + 1))
+        systemctl is-active --quiet sing-box && break
+    done
     systemctl is-active --quiet sing-box \
         || fail "回滚后仍起不来，需要人工介入（journalctl -u sing-box -n 100）"
 fi

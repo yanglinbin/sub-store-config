@@ -16,7 +16,7 @@
 | 文件 | 做什么 |
 |---|---|
 | `defaults/sbc-update` | 装到 `/etc/default/sbc-update`：指定订阅源为服务器专用文件（`…/api/file/singbox-server`，带 `redirect=1`），以及 IPv4 副本源（`…/api/file/singbox-server-ipv4`，`redirect=1&ipv4=1`） |
-| `sbc-update.sh` | 从 Sub-Store 拉最新的 sing-box 配置，过五道闸（下载 / 形状 / 节点数≥5 / `auto_redirect` 必须存在 / `sing-box check`）后原子替换并重启；内容没变则不重启。同时维护**两份主配置**：`config.dual.json`（双栈）和 `config.ipv4.json`（纯 v4，副产物，任一闸不过只告警、保留旧文件）；`config.json` 装哪份由 `/etc/default/sbc-switch` 的 `MODE` 决定。订阅源优先级：环境变量 > `/etc/default/sbc-update` > 内置默认 |
+| `sbc-update.sh` | 从 Sub-Store 拉最新的 sing-box 配置，过六道闸（下载 / 形状 / 节点数≥5 / `auto_redirect` 必须存在 / `sing-box check` / `/etc/sing-box` 下不许有额外 `*.json`）后原子替换并重启；内容没变则不重启。同时维护**两份主配置**：`/var/lib/sbc-update/config.dual.json`（双栈）和 `config.ipv4.json`（纯 v4，副产物，任一闸不过只告警、保留旧文件）。**不能**放 `/etc/sing-box` —— 单元是 `sing-box -C /etc/sing-box`，会把目录里所有 `*.json` 合并加载，多一份就 `duplicate inbound tag` 起不来；`config.json` 装哪份由 `/etc/default/sbc-switch` 的 `MODE` 决定。订阅源优先级：环境变量 > `/etc/default/sbc-update` > 内置默认 |
 | `defaults/sbc-switch` | 装到 `/etc/default/sbc-switch`：`MODE=dual \| ipv4`，记当前生效的是哪份；已存在就不覆盖（重装不会改回默认） |
 | `sbc-switch.sh` | `sbc-switch.sh [dual\|ipv4\|status]`：把对应的主配置装成 `/etc/sing-box/config.json` 并重启，起不来自动回滚到切换前那份 |
 | `sbc-sync-dist.sh` | 把 `dist` 分支（单 commit，强推）同步到 `/data/nginx/html/sbc`，让客户端从本站拉 `.srs`；工作副本在 `/opt/sbc-dist`（可随时删掉重建）；完整性闸口：`.srs` 少于 15 个就 `die`，旧产物原样保留 |
