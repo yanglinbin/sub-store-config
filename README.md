@@ -72,32 +72,72 @@ sing-box 侧的前置/插入动作（不随 `order.yaml` 变化）：
 
 ## DNS 分流（sing-box 1.14 的 `evaluate` / `race`）
 
-目标：**国内域名只问国内 DNS，国外域名交给出口侧去问，两边都可能命中时并发问、谁先给出可用答案用谁**。
+目标：**国内域名只问国内 DNS（主备切换），国外域名交给出口侧去问，两边都可能命中时并发问、谁先给出可用答案用谁；凡是会拖慢首包的查询类型一律本地空回答**。
 DNS 规则由 `order.yaml` 的 `target` 派生（`build/render-singbox.mjs: buildDnsRules`），改顺序不用改模板。
+
+五台上游（`templates/singbox.json.tpl` 的 `dns.servers`）：
+
+| tag | 类型 | 地址 | 角色 |
+|---|---|---|---|
+| `local-dns` | DoH | 223.5.5.5 | 国内主用（阿里） |
+| `local-dns-2` | DoH | doh.pub（用 `local-dns-udp` 解析它自己的域名） | 国内备用（DNSPod） |
+| `local-dns-udp` | UDP | 223.6.6.6 | 只用来解析 `doh.pub`，兼 DoH 全挂时的最后一路 |
+| `remote-dns` | DoH | 1.1.1.1，`detour: proxies` | 境外主用 |
+| `remote-dns-2` | TLS | 8.8.8.8，`detour: proxies` | 境外备用 |
 
 | 查询 | 走哪 | 为什么 |
 |---|---|---|
+| `AAAA`（任何域名） | 本地空回答 `NOERROR` | 网络没有可用 IPv6 时，拿到 AAAA 只会先赔一次 `network is unreachable` 的死等（手机日志实测 4ms~5s）再回退 v4 |
+| `HTTPS` / `SVCB`（任何域名） | 本地空回答 `NOERROR` | CDN 会在这条记录里塞 `ipv4hint`/`ipv6hint`，把客户端直接引到境外或劣质边缘，还绕过 fakeip 的域名分流（实测 `mmbiz.qpic.cn` 被引到腾讯新加坡，CN 直连 TLS 失败） |
 | 内网域名（`.lan/.local/.direct`）、NTP 主机 | `local-dns` | 必须本地答，走代理直接不通 |
-| `target=direct` 的域名模块（`direct`/`selfhost`/`private`/`apple`/`icloud`） | `local-dns`（真实 IP） | 反正要直连，拿到真实 IP 可省掉连接期的一次 `resolve` |
-| `target=proxies` 的域名模块（`subscription`/`google`/`gfw`/`proxy`）的 A/AAAA | `fakeip` | 域名直接交给出口，本地零 DNS 等待、零污染 |
-| 其余查询类型（`HTTPS`/`SVCB` 等非 A/AAAA） | `remote-dns` | 国内 DNS 对国外域名只会给出 CN 视角的答案 |
-| 哪张域名表都没进的 A/AAAA | 本地 + 远端**并发** | 见下 |
+| `target=direct` 的域名模块 | `local-dns` → 1s 未答则 `local-dns-2` | 反正要直连，拿到真实 IP 可省掉连接期的一次 `resolve`；主 DNS 挂了也不至于解析失败 |
+| `target=proxies` 的域名模块的 A/AAAA | `fakeip` | 域名直接交给出口，本地零 DNS 等待、零污染 |
+| 其余查询类型（`TXT`/`SRV` 等） | `local-dns` | 跨洋问没有意义 |
+| 哪张域名表都没进的 A/AAAA | 本地 + 境外两路**并发** | 见下 |
 
-未命中分支用 1.14 才有的能力，四条规则配合：
+国内域名的主备切换（每个 direct 模块三条规则）：
+
+```json
+{"rule_set":["direct"],"action":"evaluate","server":"local-dns","timeout":"1s"},
+{"rule_set":["direct"],"match_response":true,"action":"respond"},
+{"rule_set":["direct"],"action":"route","server":"local-dns-2"}
+```
+
+> **不能写两条匿名 `evaluate` 做竞速**：匿名 evaluate 的响应只有一格，后一条会覆盖前一条
+> （启动日志里是 `dns rule[N]: evaluated response is overwritten by dns rule[N+1] before any use`），
+> 只会白白多打一次 DNS。要并行只能给每条 evaluate 起 `tag`，或像上面这样"主 + 兜底"串起来。
+
+未命中分支用 1.14 才有的能力：
 
 ```json
 {"action":"evaluate","server":"local-dns","timeout":"2s"},   // 并行发出，不阻塞规则匹配
 {"action":"evaluate","server":"remote-dns","tag":"remote-answer"},
+{"action":"evaluate","server":"remote-dns-2","tag":"remote-answer-2"},
 {"match_response":true,"race":true,"rule_set":["lancidr","cncidr"],"action":"respond"},
-{"match_response":"remote-answer","action":"respond"}
+{"match_response":"remote-answer","action":"respond"},
+{"match_response":"remote-answer-2","action":"respond"}
 ```
 
-- 第三条带 `race`：本地一答复就判，**答案落在 CN/内网 IP 段就立刻返回**（实测 78ms，而不是等远端超时的 5s）。
-- 本地答案不是国内 IP（或解析失败）时第三条不匹配，落到第四条等远端那份——这才是要代理的流量。
-- 第四条**故意不加 `race`**：加了就变成"远端先到就用远端"，会把本来就该直连的国内站点推去代理。
+- 带 `race` 的那条：本地一答复就判，**答案落在 CN/内网 IP 段就立刻返回**（实测 78ms，而不是等远端超时的 5s）。
+- 本地答案不是国内 IP（或解析失败）时它不匹配，落到后面两条等远端——这才是要代理的流量。
+- 后两条**故意不加 `race`**：加了就变成"远端先到就用远端"，会把本来就该直连的国内站点推去代理。
 - `race` 与 `speculative` 互斥，且必须配 `match_response`（否则 sing-box 拒绝启动），所以这里不用 `speculative`。
-- 两条 `evaluate` 必须排在 `race` 规则之前：`evaluate` 只有在"后面还有 pending 的 race 规则"时才会立即发出，顺序换了就退化成串行。
-- 本机实测（`clash_api` 的 `/dns/query`）：`www.baidu.com` → `183.2.172.177`（60ms，本地答）；`www.google.com` → `198.18.0.2`（fakeip，20ms）；`www.cac.gov.cn` → 本地真实 IP；未命中的 `example.com` 走并发分支。
+- 三条 `evaluate` 必须排在 `race` 规则之前：`evaluate` 只有在"后面还有 pending 的 race 规则"时才会立即发出，顺序换了就退化成串行。
+- 缓存与超时显式写死：`dns.timeout: "5s"`、`optimistic: true`、`cache_capacity: 8192`，不依赖默认值。
+
+**为什么用 `predefined` 而不是 `reject`**：`reject` 的 `method` 只有 `default`（回 REFUSED）和 `drop`（丢包）两种，
+而且默认在 **50 次/30s 之后会自动退化成 `drop`** —— 浏览器对每个域名都会问 AAAA/HTTPS，轻易就触发，
+结果就是"查询被丢掉、等超时"，比不加规则还慢。`predefined` 回的是空 `NOERROR`，客户端立刻按"没有该记录"处理。
+
+本机实测（`clash_api` 的 `/dns/query`，1.14.4）：
+
+| 查询 | 改前 | 改后 |
+|---|---|---|
+| `mmbiz.qpic.cn` A | 67ms（本地答） | 67ms（本地答，主 DNS） |
+| `mmbiz.qpic.cn` AAAA | 走 `local-dns` 真实解析，返回腾讯 IPv6 | `NOERROR` 空回答，0.4ms |
+| `mmbiz.qpic.cn` HTTPS | 经代理问 1.1.1.1，返回境外 hint | `NOERROR` 空回答，0.4ms |
+| `www.google.com` A | `198.18.0.2`（fakeip） | 不变，19ms |
+| 主 DNS 黑洞时 `mmbiz.qpic.cn` A | 解析失败 | 1.0s 后由 `local-dns-2` 答出（兜底生效） |
 
 **已删除/替换的参数**（用户要求：不用将来会被弃用的写法）：
 
@@ -368,9 +408,11 @@ sudo /usr/local/bin/sbc-update.sh
 
 ## 关闭 IPv6（默认开启）
 
+sing-box 端**已经全局拦截 AAAA**（`dns.rules` 里的 `predefined(NOERROR)` 空回答），所以设备侧拿不到
+IPv6 地址就不会尝试 v6 连接，不需要再关 tun 的双栈地址。真要彻底关掉：
+
 - mihomo：`templates/mihomo.yaml.tpl` 里 `ipv6: true` → `false`
-- sing-box：`dns.rules` 最前面加 `{ "query_type": ["AAAA"], "action": "reject" }`，
-  `dns.strategy` 改 `ipv4_only`，删 tun 的 `fdfe:...` 地址与 fakeip 的 `inet6_range`
+- sing-box：删 tun 的 `fdfe:...` 地址与 fakeip 的 `inet6_range`，`dns.strategy` 改 `ipv4_only`
 
 ## 已知限制
 

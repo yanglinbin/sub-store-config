@@ -4,12 +4,18 @@
   "dns": {
     "servers": [
       { "type": "https", "tag": "local-dns", "server": "223.5.5.5", "path": "/dns-query" },
+      { "type": "https", "tag": "local-dns-2", "server": "doh.pub", "path": "/dns-query", "domain_resolver": "local-dns-udp" },
+      { "type": "udp", "tag": "local-dns-udp", "server": "223.6.6.6" },
       { "type": "https", "tag": "remote-dns", "server": "1.1.1.1", "path": "/dns-query", "detour": "proxies" },
+      { "type": "tls", "tag": "remote-dns-2", "server": "8.8.8.8", "detour": "proxies" },
       { "type": "fakeip", "tag": "fakeip", "inet4_range": "198.18.0.0/15", "inet6_range": "fc00::/18" }
     ],
     "rules": {{DNS_RULES}},
     "final": "local-dns",
-    "strategy": "prefer_ipv4"
+    "strategy": "prefer_ipv4",
+    "timeout": "5s",
+    "optimistic": true,
+    "cache_capacity": 8192
   },
   "inbounds": [
     {

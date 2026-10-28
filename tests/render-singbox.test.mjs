@@ -85,29 +85,62 @@ test('不再使用 1.15 将弃置的 tun.stack', () => {
   assert.ok(!('stack' in tun), 'stack 在 1.15 弃用、1.17 移除，删掉即用新栈');
 });
 
-test('DNS 分流：国内域名走 local、代理域名走 fakeip、其余类型走 remote', () => {
+test('DNS 分流：国内域名主用 local + DNSPod 兜底、代理域名走 fakeip、其余类型走 local', () => {
   const c = render();
   const rules = c.dns.rules;
-  const route = (m) => rules.find((r) => Array.isArray(r.rule_set) && r.rule_set.includes(m));
-  assert.equal(route('direct').server, 'local-dns', '国内域名用本地 DNS 真实解析');
-  assert.equal(route('direct').query_type, undefined, '国内域名所有查询类型都走本地');
-  assert.equal(route('gfw').server, 'fakeip', '代理域名用 fakeip，解析交给出口侧');
-  assert.deepEqual(route('gfw').query_type, ['A', 'AAAA']);
-  // 非 A/AAAA（HTTPS/SVCB 等）不能被本地 DNS 回答
+  const find = (m) => rules.filter((r) => Array.isArray(r.rule_set) && r.rule_set.includes(m));
+  const direct = find('direct');
+  assert.equal(direct[0].action, 'evaluate', '国内域名先问阿里 DNS');
+  assert.equal(direct[0].server, 'local-dns');
+  assert.equal(direct[0].timeout, '1s', '1s 没答就换备用，不要拖');
+  assert.deepEqual(direct[1], { rule_set: ['direct'], match_response: true, action: 'respond' });
+  assert.equal(direct[2].server, 'local-dns-2', '阿里没答时换 DNSPod');
+  assert.equal(direct[2].action, 'route');
+  // 两台国内 DNS 不能同时匿名 evaluate：结果会被后一条覆盖（sing-box 启动会告警）
+  assert.ok(!direct.some((r) => r.action === 'evaluate' && r.server === 'local-dns-2'));
+
+  const gfw = find('gfw');
+  assert.equal(gfw.length, 1, '代理域名只要一条 fakeip 规则');
+  assert.equal(gfw[0].server, 'fakeip', '代理域名用 fakeip，解析交给出口侧');
+  assert.deepEqual(gfw[0].query_type, ['A', 'AAAA']);
+
+  // 非 A/AAAA（TXT/SRV 等）不能被本地 DNS 回答，但也不该跨洋去问
   const rest = rules.find((r) => r.invert === true);
-  assert.deepEqual(rest, { query_type: ['A', 'AAAA'], invert: true, action: 'route', server: 'remote-dns' });
+  assert.deepEqual(rest, { query_type: ['A', 'AAAA'], invert: true, action: 'route', server: 'local-dns' });
   assert.equal(c.dns.final, 'local-dns');
   assert.equal(c.dns.strategy, 'prefer_ipv4');
+  assert.equal(c.dns.timeout, '5s');
+  assert.equal(c.dns.optimistic, true);
+  assert.equal(c.dns.cache_capacity, 8192);
 });
 
-test('DNS 未命中域名：本地/远端并发 evaluate + race 抢先采用国内答案', () => {
+test('DNS 前置：AAAA 与 HTTPS/SVCB 一律空回答（NOERROR）', () => {
   const c = render();
   const rules = c.dns.rules;
-  const idxLocal = rules.findIndex((r) => r.action === 'evaluate' && r.server === 'local-dns');
-  const idxRemote = rules.findIndex((r) => r.action === 'evaluate' && r.server === 'remote-dns');
-  assert.ok(idxLocal > 0 && idxRemote === idxLocal + 1, '两条查询必须在任何 race 规则之前发出，才能并行');
+  const aaaa = rules.find((r) => Array.isArray(r.query_type) && r.query_type.length === 1 && r.query_type[0] === 'AAAA');
+  assert.deepEqual(aaaa, { query_type: ['AAAA'], action: 'predefined', rcode: 'NOERROR' });
+  const https = rules.find((r) => Array.isArray(r.query_type) && r.query_type.includes('SVCB'));
+  assert.deepEqual(https, { query_type: ['HTTPS', 'SVCB'], action: 'predefined', rcode: 'NOERROR' });
+  // 必须用 predefined(NOERROR)，不能用 reject：reject 默认回 REFUSED，且 50 次/30s 后退化成 drop
+  assert.ok(!JSON.stringify(rules).includes('"reject"'), 'reject 会 REFUSED/丢包，不能用');
+  // 必须排在域名模块之前，否则 fakeip 域名也会先被解析
+  const idxHttps = rules.indexOf(https);
+  const idxFirstModule = rules.findIndex((r) => Array.isArray(r.rule_set));
+  assert.ok(idxHttps < idxFirstModule, 'AAAA/HTTPS 拦截要放在域名分派之前');
+});
+
+test('DNS 未命中域名：本地 + 境外两路并发 evaluate + race 抢先采用国内答案', () => {
+  const c = render();
+  const rules = c.dns.rules;
+  // 只看“未命中任何域名表”那三条匿名 evaluate（不带 rule_set 的尾部）
+  const tail = rules.filter((r) => !r.rule_set && !r.domain_suffix && r.action === 'evaluate');
+  const idxLocal = rules.indexOf(tail[0]);
+  const idxRemote = rules.indexOf(tail.find((r) => r.server === 'remote-dns'));
+  const idxRemote2 = rules.indexOf(tail.find((r) => r.server === 'remote-dns-2'));
+  assert.ok(idxLocal > 0 && idxRemote === idxLocal + 1 && idxRemote2 === idxRemote + 1, '三条查询必须在任何 race 规则之前发出，才能并行');
   assert.equal(rules[idxLocal].timeout, '2s', '本地那路给 2s 超时，别把远端答案一起拖死');
   assert.equal(rules[idxRemote].tag, 'remote-answer');
+  assert.equal(rules[idxRemote2].tag, 'remote-answer-2');
 
   const idxRace = rules.findIndex((r) => r.race === true);
   assert.ok(idxRace > idxRemote);
@@ -124,6 +157,7 @@ test('DNS 未命中域名：本地/远端并发 evaluate + race 抢先采用国�
   const idxFallback = rules.findIndex((r) => r.match_response === 'remote-answer');
   assert.deepEqual(rules[idxFallback], { match_response: 'remote-answer', action: 'respond' });
   assert.ok(!('race' in rules[idxFallback]), '远端那条不标 race，等本地 race 判完才生效');
+  assert.deepEqual(rules[idxFallback + 1], { match_response: 'remote-answer-2', action: 'respond' });
 });
 
 test('模板里的 selector 都带 interrupt_exist_connections', () => {
