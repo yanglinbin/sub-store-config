@@ -251,3 +251,61 @@ test('redirect=1 时给 tun 注入 auto_redirect', async () => {
   const out = JSON.parse(ctx.$content);
   assert.equal(out.inbounds[0].auto_redirect, true);
 });
+
+test('默认保留 IPv6（tun 双栈 + fakeip inet6_range）', async () => {
+  await emitScripts({ regionsPath: 'config/regions.yaml', outDir });
+  const code = readFileSync(join(outDir, 'singbox.js'), 'utf8');
+  const tpl = JSON.parse(template);
+  tpl.inbounds = [{ type: 'tun', tag: 'tun-in', auto_route: true, address: ['10.66.0.1/30', 'fdfe:dcba:9876::1/126'] }];
+  tpl.dns = {
+    servers: [{ type: 'fakeip', tag: 'fakeip', inet4_range: '198.18.0.0/15', inet6_range: 'fc00::/18' }],
+    strategy: 'prefer_ipv4',
+  };
+  const ctx = {
+    $arguments: { name: 'default' },
+    $files: [JSON.stringify(tpl)],
+    $content: null,
+    produceArtifact: async () => [{ type: 'vless', tag: '🇭🇰Hong Kong 03' }],
+    console,
+  };
+  vm.createContext(ctx);
+  await vm.runInContext(`(async () => {\n${code}\n})()`, ctx);
+  const out = JSON.parse(ctx.$content);
+  assert.equal(out.inbounds[0].address.length, 2);
+  assert.equal(out.dns.strategy, 'prefer_ipv4');
+  assert.equal(out.dns.servers[0].inet6_range, 'fc00::/18');
+});
+
+test('ipv4=1 时只保留 IPv4：tun 去 v6 地址、fakeip 去 inet6_range、strategy=ipv4_only', async () => {
+  await emitScripts({ regionsPath: 'config/regions.yaml', outDir });
+  const code = readFileSync(join(outDir, 'singbox.js'), 'utf8');
+  const tpl = JSON.parse(template);
+  tpl.inbounds = [
+    { type: 'tun', tag: 'tun-in', auto_route: true, address: ['10.66.0.1/30', 'fdfe:dcba:9876::1/126'] },
+    { type: 'mixed', tag: 'mixed-in', listen: '127.0.0.1', listen_port: 7890 },
+  ];
+  tpl.dns = {
+    servers: [
+      { type: 'https', tag: 'local-dns', server: '223.5.5.5', path: '/dns-query' },
+      { type: 'fakeip', tag: 'fakeip', inet4_range: '198.18.0.0/15', inet6_range: 'fc00::/18' },
+    ],
+    strategy: 'prefer_ipv4',
+  };
+  const ctx = {
+    $arguments: { name: 'default', redirect: '1', ipv4: '1' },
+    $files: [JSON.stringify(tpl)],
+    $content: null,
+    produceArtifact: async () => [{ type: 'vless', tag: '🇭🇰Hong Kong 03' }],
+    console,
+  };
+  vm.createContext(ctx);
+  await vm.runInContext(`(async () => {\n${code}\n})()`, ctx);
+  const out = JSON.parse(ctx.$content);
+  assert.deepEqual(out.inbounds[0].address, ['10.66.0.1/30']);
+  assert.equal(out.inbounds[0].auto_redirect, true, 'redirect 与 ipv4 可叠加');
+  assert.equal('mixed-in' in out.inbounds[1], false);
+  assert.equal(out.inbounds[1].type, 'mixed');
+  assert.equal(out.dns.strategy, 'ipv4_only');
+  assert.equal('inet6_range' in out.dns.servers[1], false);
+  assert.equal(out.dns.servers[0].server, '223.5.5.5');
+});

@@ -13,7 +13,7 @@ HERE=$(cd "$(dirname "$0")" && pwd) || { echo "[FAIL] 无法定位脚本目录" 
 BIN=/usr/local/bin
 UNIT_DIR=/etc/systemd/system
 
-SCRIPTS="sbc-update.sh sbc-sync-dist.sh"
+SCRIPTS="sbc-update.sh sbc-switch.sh sbc-sync-dist.sh"
 UNITS="sbc-update.service sbc-update.timer sbc-sync-dist.service sbc-sync-dist.timer"
 
 die() {
@@ -37,6 +37,11 @@ done
 if [ -f "$HERE/defaults/sbc-update" ]; then
     install -o root -g root -m 644 "$HERE/defaults/sbc-update" /etc/default/sbc-update         || die "安装 /etc/default/sbc-update 失败"
     echo "[OK] /etc/default/sbc-update"
+fi
+# 已存在的切换记录不覆盖（重装不该把用户选好的 dual/ipv4 改回去）
+if [ -f "$HERE/defaults/sbc-switch" ] && [ ! -f /etc/default/sbc-switch ]; then
+    install -o root -g root -m 644 "$HERE/defaults/sbc-switch" /etc/default/sbc-switch         || die "安装 /etc/default/sbc-switch 失败"
+    echo "[OK] /etc/default/sbc-switch"
 fi
 
 for u in $UNITS; do

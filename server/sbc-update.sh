@@ -20,7 +20,20 @@ if [ -r /etc/default/sbc-update ]; then
 fi
 SUBSTORE_FILE_URL="${SUBSTORE_FILE_URL:-}"
 SUBSTORE_FILE_URL="${SUBSTORE_FILE_URL:-https://sub-store.yilabao.top/cdc1dc50c1a6799f49c87914ef77def3/api/file/singbox}"
+# IPv4 副本的订阅源：同一 Sub-Store 下的 singbox-server-ipv4 文件；
+# 没配置就从主源推导（只换文件名），实在推导不出来就跳过 IPv4 副本
+SUBSTORE_FILE_URL_IPV4="${SUBSTORE_FILE_URL_IPV4:-}"
+if [ -z "$SUBSTORE_FILE_URL_IPV4" ]; then
+    case "$SUBSTORE_FILE_URL" in
+        */api/file/*)
+            SUBSTORE_FILE_URL_IPV4="${SUBSTORE_FILE_URL%%/api/file/*}/api/file/singbox-server-ipv4?noCache=true"
+            ;;
+    esac
+fi
 CFG=/etc/sing-box/config.json
+CFG_DUAL=/etc/sing-box/config.dual.json   # 双栈主配置（本脚本维护，不直接生效）
+CFG_IPV4=/etc/sing-box/config.ipv4.json   # IPv4-only 主配置（同模板 + 脚本参数 ipv4=1）
+MODE_FILE=/etc/default/sbc-switch         # 记着当前要用哪份：MODE=dual | ipv4
 BAK_GLOB=/etc/sing-box/config.json.bak
 MIN_NODES=5   # 少于这么多个节点说明机场掉线或脚本出错，不能替换
 KEEP_BAK=3    # 只保留最近几份备份
@@ -32,6 +45,54 @@ fail() {
     echo "[FAIL] $*" >&2
     echo "[FAIL] 配置未替换，sing-box 继续使用旧配置" >&2
     exit 1
+}
+
+# IPv4 副本：同一模板加脚本参数 ipv4=1 的产物（tun 只留 v4 地址、fakeip 去掉 inet6_range、
+# dns.strategy=ipv4_only），供 sbc-switch.sh 切换用。
+# 它是副产物：任何一步不过都只告警、保留旧文件，绝不让它挡住双栈主配置的更新。
+MODE=dual
+[ -r "$MODE_FILE" ] && . "$MODE_FILE"
+MODE="${MODE:-dual}"
+
+update_ipv4() {
+    [ -n "$SUBSTORE_FILE_URL_IPV4" ] || { echo "[WARN] 未配置 IPv4 副本源，跳过" >&2; return 0; }
+    _t=$(mktemp /tmp/sbc-update-ipv4.XXXXXX) || { echo "[WARN] mktemp 失败，跳过 IPv4 副本" >&2; return 0; }
+    if ! curl -fsS --retry 3 --connect-timeout 10 --max-time 120 -o "$_t" "$SUBSTORE_FILE_URL_IPV4"; then
+        echo "[WARN] IPv4 副本下载失败（保留旧文件）：$SUBSTORE_FILE_URL_IPV4" >&2
+        rm -f "$_t"; return 0
+    fi
+    if ! head -c 16 "$_t" | tr -d '[:space:]' | grep -q '^{' || ! grep -q '"outbounds"' "$_t"; then
+        echo "[WARN] IPv4 副本不是合法配置（保留旧文件）" >&2
+        rm -f "$_t"; return 0
+    fi
+    _n=$(grep -o '"server_port"' "$_t" | wc -l)
+    if [ "$_n" -lt "$MIN_NODES" ]; then
+        echo "[WARN] IPv4 副本只有 $_n 个节点（< $MIN_NODES），保留旧文件" >&2
+        rm -f "$_t"; return 0
+    fi
+    if [ "${REQUIRE_AUTO_REDIRECT:-0}" = 1 ] && ! grep -q '"auto_redirect": *true' "$_t"; then
+        echo "[WARN] IPv4 副本没有 auto_redirect（订阅源应指向 singbox-server-ipv4），保留旧文件" >&2
+        rm -f "$_t"; return 0
+    fi
+    # 挡住“ipv4=1 参数没传成功”这种静默退化：副本必须真的是 ipv4_only
+    if ! grep -q '"strategy": *"ipv4_only"' "$_t"; then
+        echo "[WARN] IPv4 副本不是 ipv4_only（脚本参数漏了 ipv4=1？），保留旧文件" >&2
+        rm -f "$_t"; return 0
+    fi
+    if ! sing-box check -c "$_t"; then
+        echo "[WARN] IPv4 副本 sing-box check 未通过，保留旧文件" >&2
+        rm -f "$_t"; return 0
+    fi
+    if [ -f "$CFG_IPV4" ] && cmp -s "$_t" "$CFG_IPV4"; then
+        echo "[OK] IPv4 配置无变化（$_n 个节点）"
+        rm -f "$_t"; return 0
+    fi
+    if install -o root -g sing-box -m 640 "$_t" "$CFG_IPV4"; then
+        echo "[OK] IPv4 配置已就绪：$CFG_IPV4（$_n 个节点）"
+    else
+        echo "[WARN] 写入 $CFG_IPV4 失败" >&2
+    fi
+    rm -f "$_t"
 }
 
 # 闸 1：下载。--retry 3 让偶发 5xx/超时自愈，-f 让 4xx/5xx 变成非零退出码
@@ -57,9 +118,26 @@ fi
 # 闸 5：语法。sing-box 自己说能加载才算数（还能顺带挡住端口/字段改错）
 sing-box check -c "$TMP" || fail "sing-box check 未通过"
 
+# ---- 两份主配置都维护：双栈这份就是刚过闸的内容 ----
+install -o root -g sing-box -m 640 "$TMP" "$CFG_DUAL" || fail "写入 $CFG_DUAL 失败"
+echo "[OK] 双栈配置已就绪：$CFG_DUAL（$nodes 个节点）"
+update_ipv4
+
+# ---- 生效哪份由 MODE 决定（sbc-switch.sh 切）----
+ACTIVE_SRC="$TMP"
+case "$MODE" in
+    ipv4|6)
+        [ -s "$CFG_IPV4" ] || fail "MODE=ipv4 但 $CFG_IPV4 不可用（先看上面 IPv4 副本的告警）"
+        ACTIVE_SRC="$CFG_IPV4"
+        ;;
+    *)
+        MODE=dual
+        ;;
+esac
+
 # 内容没变就别重启：重启会掐断所有连接，没必要
-if [ -f "$CFG" ] && cmp -s "$TMP" "$CFG"; then
-    echo "[OK] 配置无变化（$nodes 个节点），跳过重启"
+if [ -f "$CFG" ] && cmp -s "$ACTIVE_SRC" "$CFG"; then
+    echo "[OK] 配置无变化（$nodes 个节点，MODE=$MODE），跳过重启"
     exit 0
 fi
 
@@ -73,7 +151,7 @@ if [ -f "$CFG" ]; then
 fi
 
 # 替换：属主 root:sing-box 640，sing-box 服务（User=sing-box）才能读到
-install -o root -g sing-box -m 640 "$TMP" "$CFG" || fail "写入 $CFG 失败"
+install -o root -g sing-box -m 640 "$ACTIVE_SRC" "$CFG" || fail "写入 $CFG 失败"
 
 restart_or_rollback() {
     systemctl restart sing-box 2>/dev/null
@@ -104,4 +182,4 @@ restart_or_rollback() {
 restart_or_rollback
 
 
-echo "[OK] 配置已更新并重启：$nodes 个节点"
+echo "[OK] 配置已更新并重启：$nodes 个节点（MODE=$MODE）"

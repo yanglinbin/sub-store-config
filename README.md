@@ -375,6 +375,18 @@ sudo /usr/local/bin/sbc-update.sh
 | 来源 | 远程 `…/dist/singbox/template.json` |
 | 处理 | 脚本操作：`…/scripts/singbox.js#name=kitty&noCache=true` |
 
+脚本参数（写在脚本 URL 的 `#` 后面，用 `&` 分隔）：
+
+| 参数 | 作用 |
+|---|---|
+| `name=kitty`（必填） | 订阅名或组合订阅名 |
+| `type=col` | 源是组合订阅时写，默认单条订阅 |
+| `redirect=1` | 给 tun 补 `auto_redirect`，**仅 Linux 服务器用**（Windows 上加会 FATAL） |
+| `ipv4=1` | 整份只跑 IPv4：tun 去掉 `fdfe::/126`、fakeip 去掉 `inet6_range`、`dns.strategy` 改 `ipv4_only`。网络无可用 IPv6（手机数据、部分宽带）时用，能省掉每条新连接一次不可达尝试 |
+
+所以服务器要三份或四份文件：`singbox`（桌面双栈）、`singbox-ipv4`（桌面纯 v4）、
+`singbox-server`（服务器双栈，带 `redirect=1`）、`singbox-server-ipv4`（两者相加）。
+
 ### 4.（可选）Gist 同步
 
 脚本不联网，一般不会超时；客户端若仍超时，把两个文件各建一个「同步」任务推到私有 Gist。
@@ -412,7 +424,9 @@ sing-box 端**已经全局拦截 AAAA**（`dns.rules` 里的 `predefined(NOERROR
 IPv6 地址就不会尝试 v6 连接，不需要再关 tun 的双栈地址。真要彻底关掉：
 
 - mihomo：`templates/mihomo.yaml.tpl` 里 `ipv6: true` → `false`
-- sing-box：删 tun 的 `fdfe:...` 地址与 fakeip 的 `inet6_range`，`dns.strategy` 改 `ipv4_only`
+- sing-box：把文件处理脚本的参数加上 `ipv4=1`（新建一个 `-ipv4` 文件，别改现有的），
+  等价于删 tun 的 `fdfe:...` 地址、假的 `inet6_range`，并把 `dns.strategy` 改 `ipv4_only`；
+  服务器端 `sbc-switch.sh ipv4` 一键切换
 
 ## 已知限制
 

@@ -1,0 +1,7 @@
+# 当前生效的 sing-box 配置模式（由 sbc-switch.sh 写入，sbc-update.sh 读取并沿用）
+#
+# dual = 双栈（/etc/sing-box/config.dual.json）
+# ipv4 = 整份只跑 IPv4（/etc/sing-box/config.ipv4.json）：tun 只留 v4 地址、
+#        fakeip 去掉 inet6_range、dns.strategy=ipv4_only
+# 服务器所在网络没有可用 IPv6 时用 ipv4，能省掉每条新连接一次不可达尝试。
+MODE=dual
