@@ -1,0 +1,631 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "http_clients": [
+    {
+      "tag": "direct-download"
+    }
+  ],
+  "dns": {
+    "servers": [
+      {
+        "type": "https",
+        "tag": "local-dns",
+        "server": "223.5.5.5",
+        "path": "/dns-query"
+      },
+      {
+        "type": "https",
+        "tag": "local-dns-2",
+        "server": "doh.pub",
+        "path": "/dns-query",
+        "domain_resolver": "local-dns-udp"
+      },
+      {
+        "type": "udp",
+        "tag": "local-dns-udp",
+        "server": "223.6.6.6"
+      },
+      {
+        "type": "https",
+        "tag": "remote-dns",
+        "server": "1.1.1.1",
+        "path": "/dns-query",
+        "detour": "proxies"
+      },
+      {
+        "type": "tls",
+        "tag": "remote-dns-2",
+        "server": "8.8.8.8",
+        "detour": "proxies"
+      },
+      {
+        "type": "fakeip",
+        "tag": "fakeip",
+        "inet4_range": "198.18.0.0/15",
+        "inet6_range": "fc00::/18"
+      }
+    ],
+    "rules": [
+      {
+        "domain_suffix": [
+          ".lan",
+          ".local",
+          ".direct",
+          ".localhost"
+        ],
+        "action": "route",
+        "server": "local-dns"
+      },
+      {
+        "domain_suffix": [
+          "time.windows.com",
+          "time.apple.com",
+          "time.nist.gov",
+          "pool.ntp.org",
+          "ntp.aliyun.com",
+          "ntp.tencent.com"
+        ],
+        "action": "route",
+        "server": "local-dns"
+      },
+      {
+        "query_type": [
+          "AAAA"
+        ],
+        "action": "predefined",
+        "rcode": "NOERROR"
+      },
+      {
+        "query_type": [
+          "HTTPS",
+          "SVCB"
+        ],
+        "action": "predefined",
+        "rcode": "NOERROR"
+      },
+      {
+        "rule_set": [
+          "overrides"
+        ],
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "action": "route",
+        "server": "fakeip"
+      },
+      {
+        "rule_set": [
+          "subscription"
+        ],
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "action": "route",
+        "server": "fakeip"
+      },
+      {
+        "rule_set": [
+          "selfhost"
+        ],
+        "action": "evaluate",
+        "server": "local-dns",
+        "timeout": "1s"
+      },
+      {
+        "rule_set": [
+          "selfhost"
+        ],
+        "match_response": true,
+        "action": "respond"
+      },
+      {
+        "rule_set": [
+          "selfhost"
+        ],
+        "action": "route",
+        "server": "local-dns-2"
+      },
+      {
+        "rule_set": [
+          "private"
+        ],
+        "action": "evaluate",
+        "server": "local-dns",
+        "timeout": "1s"
+      },
+      {
+        "rule_set": [
+          "private"
+        ],
+        "match_response": true,
+        "action": "respond"
+      },
+      {
+        "rule_set": [
+          "private"
+        ],
+        "action": "route",
+        "server": "local-dns-2"
+      },
+      {
+        "rule_set": [
+          "apple"
+        ],
+        "action": "evaluate",
+        "server": "local-dns",
+        "timeout": "1s"
+      },
+      {
+        "rule_set": [
+          "apple"
+        ],
+        "match_response": true,
+        "action": "respond"
+      },
+      {
+        "rule_set": [
+          "apple"
+        ],
+        "action": "route",
+        "server": "local-dns-2"
+      },
+      {
+        "rule_set": [
+          "icloud"
+        ],
+        "action": "evaluate",
+        "server": "local-dns",
+        "timeout": "1s"
+      },
+      {
+        "rule_set": [
+          "icloud"
+        ],
+        "match_response": true,
+        "action": "respond"
+      },
+      {
+        "rule_set": [
+          "icloud"
+        ],
+        "action": "route",
+        "server": "local-dns-2"
+      },
+      {
+        "rule_set": [
+          "google"
+        ],
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "action": "route",
+        "server": "fakeip"
+      },
+      {
+        "rule_set": [
+          "gfw"
+        ],
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "action": "route",
+        "server": "fakeip"
+      },
+      {
+        "rule_set": [
+          "direct-pinned"
+        ],
+        "action": "evaluate",
+        "server": "local-dns",
+        "timeout": "1s"
+      },
+      {
+        "rule_set": [
+          "direct-pinned"
+        ],
+        "match_response": true,
+        "action": "respond"
+      },
+      {
+        "rule_set": [
+          "direct-pinned"
+        ],
+        "action": "route",
+        "server": "local-dns-2"
+      },
+      {
+        "rule_set": [
+          "proxy"
+        ],
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "action": "route",
+        "server": "fakeip"
+      },
+      {
+        "rule_set": [
+          "direct"
+        ],
+        "action": "evaluate",
+        "server": "local-dns",
+        "timeout": "1s"
+      },
+      {
+        "rule_set": [
+          "direct"
+        ],
+        "match_response": true,
+        "action": "respond"
+      },
+      {
+        "rule_set": [
+          "direct"
+        ],
+        "action": "route",
+        "server": "local-dns-2"
+      },
+      {
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "invert": true,
+        "action": "route",
+        "server": "local-dns"
+      },
+      {
+        "action": "evaluate",
+        "server": "local-dns",
+        "timeout": "2s"
+      },
+      {
+        "action": "evaluate",
+        "server": "remote-dns",
+        "tag": "remote-answer"
+      },
+      {
+        "action": "evaluate",
+        "server": "remote-dns-2",
+        "tag": "remote-answer-2"
+      },
+      {
+        "match_response": true,
+        "race": true,
+        "rule_set": [
+          "lancidr",
+          "cncidr"
+        ],
+        "action": "respond"
+      },
+      {
+        "match_response": "remote-answer",
+        "action": "respond"
+      },
+      {
+        "match_response": "remote-answer-2",
+        "action": "respond"
+      }
+    ],
+    "final": "local-dns",
+    "strategy": "prefer_ipv4",
+    "timeout": "5s",
+    "optimistic": true,
+    "cache_capacity": 8192
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "address": [
+        "10.66.0.1/30",
+        "fdfe:dcba:9876::1/126"
+      ],
+      "auto_route": true,
+      "strict_route": true,
+      "mtu": 1400
+    },
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "127.0.0.1",
+      "listen_port": 7890
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "selector",
+      "tag": "proxies",
+      "outbounds": [
+        "DIRECT"
+      ],
+      "default": "DIRECT",
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "selector",
+      "tag": "f1tv",
+      "outbounds": [
+        "DIRECT"
+      ],
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "selector",
+      "tag": "direct",
+      "outbounds": [
+        "DIRECT"
+      ],
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "selector",
+      "tag": "final",
+      "outbounds": [
+        "DIRECT",
+        "proxies"
+      ],
+      "default": "DIRECT",
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "direct",
+      "tag": "DIRECT"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "default_http_client": "direct-download",
+    "default_domain_resolver": "local-dns",
+    "final": "final",
+    "rule_set": [
+      {
+        "type": "remote",
+        "tag": "overrides",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/overrides.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "subscription",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/subscription.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "selfhost",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/selfhost.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "private",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/private.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "f1tv",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/f1tv.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "microsoft",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/microsoft.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "apple",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/apple.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "icloud",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/icloud.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "steam",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/steam.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "applications",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/applications.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "google",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/google.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "gfw",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/gfw.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "direct-pinned",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/direct-pinned.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "proxy",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/proxy.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "direct",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/direct.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "lancidr",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/lancidr.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "cncidr",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/cncidr.srs",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "telegramcidr",
+        "format": "binary",
+        "url": "https://sub-store.yilabao.top/sbc/singbox/rules/telegramcidr.srs",
+        "update_interval": "1d"
+      }
+    ],
+    "rules": [
+      {
+        "action": "sniff"
+      },
+      {
+        "action": "hijack-dns",
+        "protocol": "dns"
+      },
+      {
+        "rule_set": "overrides",
+        "action": "route",
+        "outbound": "proxies"
+      },
+      {
+        "rule_set": "subscription",
+        "action": "route",
+        "outbound": "proxies"
+      },
+      {
+        "rule_set": "selfhost",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "private",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "f1tv",
+        "action": "route",
+        "outbound": "f1tv"
+      },
+      {
+        "rule_set": "microsoft",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "apple",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "icloud",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "steam",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "applications",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "google",
+        "action": "route",
+        "outbound": "proxies"
+      },
+      {
+        "rule_set": "gfw",
+        "action": "route",
+        "outbound": "proxies"
+      },
+      {
+        "rule_set": "direct-pinned",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "proxy",
+        "action": "route",
+        "outbound": "proxies"
+      },
+      {
+        "rule_set": "direct",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "action": "resolve",
+        "server": "local-dns"
+      },
+      {
+        "rule_set": "lancidr",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "cncidr",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "telegramcidr",
+        "action": "route",
+        "outbound": "proxies"
+      }
+    ]
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "store_fakeip": true,
+      "store_dns": true
+    },
+    "clash_api": {
+      "external_controller": "127.0.0.1:9090"
+    }
+  }
+}

@@ -1,0 +1,220 @@
+mixed-port: 7890
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: true
+external-controller: 127.0.0.1:9090
+unified-delay: true
+tcp-concurrent: true
+find-process-mode: strict
+profile:
+  store-selected: true
+  store-fake-ip: true
+sniffer:
+  enable: true
+  parse-pure-ip: true
+  force-dns-mapping: true
+  override-destination: false
+  sniff:
+    HTTP:
+      ports:
+        - 80
+        - 8080-8880
+      override-destination: true
+    TLS:
+      ports:
+        - 443
+        - 8443
+    QUIC:
+      ports:
+        - 443
+        - 8443
+  skip-domain:
+    - +.push.apple.com
+    - +.apple.com
+dns:
+  enable: true
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - +.lan
+    - +.local
+    - +.localhost
+    - +.direct
+    - time.*
+    - ntp.*
+    - stun.*
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://223.5.5.5/dns-query
+    - https://doh.pub/dns-query
+  proxy-server-nameserver:
+    - https://223.5.5.5/dns-query
+proxies: []
+rule-providers:
+  overrides:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/overrides.list
+    path: ./ruleset/overrides.yaml
+    interval: 86400
+  subscription:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/subscription.list
+    path: ./ruleset/subscription.yaml
+    interval: 86400
+  selfhost:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/selfhost.list
+    path: ./ruleset/selfhost.yaml
+    interval: 86400
+  private:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/private.list
+    path: ./ruleset/private.yaml
+    interval: 86400
+  f1tv:
+    type: http
+    behavior: classical
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/f1tv.list
+    path: ./ruleset/f1tv.yaml
+    interval: 86400
+  microsoft:
+    type: http
+    behavior: classical
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/microsoft.list
+    path: ./ruleset/microsoft.yaml
+    interval: 86400
+  apple:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/apple.list
+    path: ./ruleset/apple.yaml
+    interval: 86400
+  icloud:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/icloud.list
+    path: ./ruleset/icloud.yaml
+    interval: 86400
+  steam:
+    type: http
+    behavior: classical
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/steam.list
+    path: ./ruleset/steam.yaml
+    interval: 86400
+  applications:
+    type: http
+    behavior: classical
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/applications.list
+    path: ./ruleset/applications.yaml
+    interval: 86400
+  google:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/google.list
+    path: ./ruleset/google.yaml
+    interval: 86400
+  gfw:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/gfw.list
+    path: ./ruleset/gfw.yaml
+    interval: 86400
+  direct-pinned:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/direct-pinned.list
+    path: ./ruleset/direct-pinned.yaml
+    interval: 86400
+  proxy:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/proxy.list
+    path: ./ruleset/proxy.yaml
+    interval: 86400
+  direct:
+    type: http
+    behavior: domain
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/direct.list
+    path: ./ruleset/direct.yaml
+    interval: 86400
+  lancidr:
+    type: http
+    behavior: ipcidr
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/lancidr.list
+    path: ./ruleset/lancidr.yaml
+    interval: 86400
+  cncidr:
+    type: http
+    behavior: ipcidr
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/cncidr.list
+    path: ./ruleset/cncidr.yaml
+    interval: 86400
+  telegramcidr:
+    type: http
+    behavior: ipcidr
+    format: text
+    url: https://sub-store.yilabao.top/sbc/mihomo/rules/telegramcidr.list
+    path: ./ruleset/telegramcidr.yaml
+    interval: 86400
+proxy-groups:
+  - name: proxies
+    type: select
+    proxies:
+      - DIRECT
+  - name: f1tv
+    type: select
+    proxies:
+      - DIRECT
+  - name: direct
+    type: select
+    proxies:
+      - DIRECT
+  - name: final
+    type: select
+    proxies:
+      - DIRECT
+rules:
+  - RULE-SET,overrides,proxies
+  - RULE-SET,subscription,proxies
+  - RULE-SET,selfhost,direct
+  - RULE-SET,private,direct
+  - RULE-SET,f1tv,f1tv
+  - RULE-SET,microsoft,direct
+  - RULE-SET,apple,direct
+  - RULE-SET,icloud,direct
+  - RULE-SET,steam,direct
+  - RULE-SET,applications,direct
+  - RULE-SET,google,proxies
+  - RULE-SET,gfw,proxies
+  - RULE-SET,direct-pinned,direct
+  - RULE-SET,proxy,proxies
+  - RULE-SET,direct,direct
+  - RULE-SET,lancidr,direct
+  - RULE-SET,cncidr,direct
+  - RULE-SET,telegramcidr,proxies
+  - MATCH,final
