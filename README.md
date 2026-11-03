@@ -45,6 +45,20 @@
 所以 `direct-pinned` 在**构建期**算 `direct ∩ proxy` 的精确交集，排在这两张表之前 → 重复项统一走直连。
 它是派生的，不是手抄的：上游明天新增或删掉重复项，`direct-pinned` 自动跟着变（当前 117 条，见 `dist/build-info.json` 的 `counts.pinnedEntries`）。
 
+
+**`proxy-apps` 为什么只收代理/隧道客户端**：这个模块是**进程规则**（`process_name`），只看进程名、
+不看域名，又排在所有域名规则之前，命中即直连。以前它直接吃上游 `applications.txt`（98 条，
+代理客户端和下载器混在一起），于是用下载器（`Thunder` / `BitComet` / `NeatDM` / `DownloadService` /
+`xdman` …）拉 GitHub release 资产时，`release-assets.githubusercontent.com` 明明在 `gfw` 和 `proxy` 里，
+却因为进程命中被整条直连。现在拆成两半：
+
+| 进程类别 | 去向 | 原因 |
+|---|---|---|
+| 代理/隧道客户端（`sing-box`、`v2ray`、`xray`、`hysteria`、`trojan*`、`tuic*`、`ss-local`、`Surge`、`tailscale`、`zerotier-one`、`frpc` … 共 64 条） | 固定直连，第 10 位 | **防回环**：它们自己连机场域名若被判成代理，就会自己代理自己 |
+| 下载器 / P2P（`Thunder`、`BitComet`、`qBittorrent`、`Transmission`、`aria2`、`xdman` …） | 不进任何进程规则，**按连接本身分流** | 下 GitHub release、docker 镜像该走代理；跑 BT 时按 IP 落 `cncidr` 或 `final` |
+
+清单在 `rules/custom/proxy-apps.yaml`，加进程只要往 `process_name` 里加一行。
+
 **日常发现"该代理却没代理"怎么办**：加进 `rules/custom/overrides.yaml`（`domain_suffix` 列表），重新构建/同步即可。
 它排在**第一条**，压过所有上游规则集——专门用来人工兜底，不用改上游、不用调顺序。
 
