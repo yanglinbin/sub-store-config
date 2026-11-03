@@ -1,3 +1,13 @@
+# 代理与隧道客户端 → 直连（防回环）
+#
+# 为什么必须在所有域名规则之前：这些进程自己的出站流量如果被域名规则判成"代理"，
+# 就会自己代理自己（sing-box 连机场域名 → 命中 proxy → 再进 tun）。
+# 只看进程名、不看域名，正是这个模块的职责。
+#
+# 下载器（Thunder / BitComet / qBittorrent / Transmission / aria2 / xdman …）**故意不在
+# 这个清单里**：它们要按连接本身分流 —— 下载 GitHub release、docker 镜像这类该走代理，
+# 下 BT 这类按 IP 命中 cncidr 或落到 final。以前它们在 upstream applications.txt 里，
+# 导致"用下载器下 GitHub 资产被整条直连"。
 process_name:
   - frpc
   - frpc.exe
@@ -63,37 +73,3 @@ process_name:
   - Surge%202
   - Surge%203
   - Surge%204
-  - BitComet
-  - BitComet.exe
-  - BitComet_x64.exe
-  - DownloadService
-  - DownloadSDKServer.exe
-  - Folx
-  - NeatDM
-  - NeatDM.exe
-  - NetTransport
-  - NetTransport.exe
-  - Thunder
-  - Thunder.exe
-  - ThunderVIP.exe
-  - Transmission
-  - WebTorrent
-  - WebTorrent.exe
- # - aria2
- # - aria2.exe
- # - aria2c
- # - aria2c.exe
-  - fdm
-  - fdm.exe
-  - qBittorrent
-  - qbittorrent.exe
-  - qbittorrent-nox
-  - transmission-daemon
-  - transmission-daemon.exe
-  - transmission-qt.exe
-  - uTorrent
-  - uTorrent.exe
-  - xdm
-  - xdm.exe
-  - xdman
-  - xdman.exe

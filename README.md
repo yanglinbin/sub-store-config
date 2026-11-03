@@ -25,7 +25,7 @@
 | 7 | `apple` | clash-rules `apple.txt` | domain | direct |
 | 8 | `icloud` | clash-rules `icloud.txt` | domain | direct |
 | 9 | `steam` | 自建（4 域名 + 40 CIDR） | classical | direct |
-| 10 | `applications` | clash-rules（98 条进程） | classical | direct |
+| 10 | `proxy-apps` | `rules/custom/proxy-apps.yaml`（代理/隧道客户端，防回环） | classical | direct |
 | 11 | `google` | clash-rules **`google.txt`**（112 条，大陆可连的 Google 域名） | domain | **proxies** |
 | 12 | `gfw` | clash-rules `gfw.txt` | domain | **proxies** |
 | 13 | `direct-pinned` | **构建期派生**（`direct` ∩ `proxy`） | domain | direct |

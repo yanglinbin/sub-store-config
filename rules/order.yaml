@@ -19,7 +19,7 @@
 - { module: apple,             target: direct }    # 7
 - { module: icloud,            target: direct }    # 8
 - { module: steam,             target: direct }    # 9
-- { module: applications,      target: direct }    # 10 进程直连
+- { module: proxy-apps,        target: direct }    # 10 代理/隧道客户端直连（防回环；下载器不在此列）
 - { module: google,            target: proxies }   # 11 Google 大陆可连域名 → 代理
 - { module: gfw,               target: proxies }   # 12
 - { module: direct-pinned,     target: direct }    # 13 direct∩proxy 的重复项 → 直连

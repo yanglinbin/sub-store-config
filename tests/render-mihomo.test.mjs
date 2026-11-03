@@ -47,7 +47,7 @@ test('rules 顺序 = order.yaml 顺序，且以 MATCH,final 兜底', () => {
     'RULE-SET,apple,direct',
     'RULE-SET,icloud,direct',
     'RULE-SET,steam,direct',
-    'RULE-SET,applications,direct',
+    'RULE-SET,proxy-apps,direct',
     'RULE-SET,google,proxies',
     'RULE-SET,gfw,proxies',
     'RULE-SET,direct-pinned,direct',

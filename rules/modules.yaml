@@ -22,9 +22,9 @@ google:             # 上游「Google 在中国大陆可直连的域名」清单
 gfw:                # 含 google.cn / google.com / youtube.com 等 251 条 Google 相关
   behavior: domain
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt"]
-applications:
+proxy-apps:                 # 代理/隧道客户端 → 直连（防回环）
   behavior: classical
-  sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt"]
+  custom: rules/custom/proxy-apps.yaml
 cncidr:
   behavior: ipcidr
   sources: ["https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt"]
