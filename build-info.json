@@ -1,0 +1,45 @@
+{
+  "builtAt": "2026-11-28T12:39:58.474Z",
+  "baseUrl": "https://sub-store.yilabao.top/sbc",
+  "counts": {
+    "modules": 18,
+    "remoteModules": 0,
+    "derivedModules": 1,
+    "builtModules": 17,
+    "builtEntries": 152572,
+    "pinnedEntries": 115,
+    "files": 36
+  },
+  "inputs": {
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt": "49972ad557345dd1abe94a62892f06cbc5b4cef12bf8d7ac5beca454b5de9088",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt": "a47d516880dcf65f51d3b40e6a71c33253e0774bdc4a7ec0a0d0a09a4dd522a2",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt": "f68eeee69a44d20a0e0f893cada4c42cef336d04e92aaa90b88d384e89009ed8",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/google.txt": "21a04f287800943b3fdfdef1f843173086171d9a0b5c9c33c3f73e1ec77d4c9e",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt": "845c6624adea5361f273c0331f89dda6665716d6a8f51ff1e4386716c753ecf7",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt": "04063818091129ce57c9fa53ab00e71d1aa5cd4f0c96674c05af23fa85e4381c",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt": "90575b69cf5f8acd8aa70ddeb9752fbbc170c81d525a920b023a7049e94967b6",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt": "a5e833af11e66049c1b1e06dbb47aa3e02df2cea7fcdebf46b59fefb6087525a",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt": "faa8d11d2e83bcc779899b07251f024b141acdf628b2dba72f6f50cac4a0364a",
+    "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt": "328fca88c675763111c7f7585ec504e5c21ab9afb7a8ce6df33b7ac01b8a3ee0"
+  },
+  "moduleEntries": {
+    "apple": 165,
+    "cncidr": 9735,
+    "direct-pinned": 115,
+    "direct": 110250,
+    "f1tv": 4,
+    "gfw": 4484,
+    "google": 112,
+    "icloud": 52,
+    "lancidr": 28,
+    "microsoft": 79,
+    "overrides": 0,
+    "private": 132,
+    "proxy-apps": 64,
+    "proxy": 27293,
+    "selfhost": 1,
+    "steam": 44,
+    "subscription": 2,
+    "telegramcidr": 12
+  }
+}
